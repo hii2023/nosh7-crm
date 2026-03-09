@@ -5,541 +5,676 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>NOSH7 CRM</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
+:root{
+  --bg:#f0f9ff;--card:#ffffff;--surface:#f8fafc;--border:#e2e8f0;
+  --accent:#22c55e;--accent-d:#16a34a;--accent-dim:#dcfce7;
+  --wa:#25D366;--wa-d:#128C7E;
+  --text:#0f172a;--muted:#64748b;--dim:#94a3b8;
+  --red:#ef4444;--yellow:#f59e0b;--blue:#3b82f6;--purple:#8b5cf6;
+  --sb-bg:#0f172a;--sb-w:220px;
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Sora',sans-serif;background:#07100a;color:#d4edd8;min-height:100vh}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 ::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:#07100a}
-::-webkit-scrollbar-thumb{background:#1a3020;border-radius:3px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--accent)}
 input,select,textarea,button{font-family:'Sora',sans-serif}
-select option{background:#0d1a0f;color:#d4edd8}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-@keyframes toastIn{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
-.spin{animation:spin .7s linear infinite}
-.fade{animation:fadeIn .25s ease}
-.sidebar-btn{width:100%;display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:8px;margin-bottom:2px;border:1px solid transparent;cursor:pointer;font-size:12px;font-weight:400;transition:all .15s;text-align:left;background:transparent;color:#6b9b6b}
-.sidebar-btn:hover{background:#122015;color:#d4edd8}
-.sidebar-btn.active{background:#0e2a18;border-color:#25D36640;color:#25D366;font-weight:600}
-.btn{display:inline-flex;align-items:center;gap:5px;cursor:pointer;border:none;border-radius:7px;font-family:'Sora',sans-serif;font-weight:500;transition:all .15s;font-size:13px;padding:8px 14px}
-.btn-sm{font-size:12px;padding:5px 11px}
-.btn-primary{background:#25D366;color:#fff}.btn-primary:hover{background:#1fbd58}
-.btn-secondary{background:#0d1a0f;color:#d4edd8;border:1px solid #1a3020}.btn-secondary:hover{background:#122015}
-.btn-danger{background:#e74c3c;color:#fff}.btn-danger:hover{background:#c0392b}
-.btn-ghost{background:transparent;color:#6b9b6b;border:1px solid transparent}.btn-ghost:hover{background:#122015;border-color:#1a3020}
-.btn-teal{background:#128C7E;color:#fff}.btn-teal:hover{background:#0d6e64}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-.input{width:100%;padding:8px 11px;border-radius:7px;font-size:13px;background:#122015;color:#d4edd8;border:1px solid #1a3020;outline:none}
-.input:focus{border-color:#25D36660}
-.label{display:block;font-size:11px;color:#6b9b6b;margin-bottom:4px}
-.card{background:#0d1a0f;border:1px solid #1a3020;border-radius:14px}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px)}
-.modal{background:#0d1a0f;border:1px solid #234028;border-radius:16px;width:100%;max-height:92vh;overflow:auto}
-.modal-header{padding:16px 22px;border-bottom:1px solid #1a3020;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#0d1a0f;z-index:1}
-.modal-body{padding:22px}
-.table{width:100%;border-collapse:collapse}
-.table th{text-align:left;padding:8px 12px;font-size:10px;color:#6b9b6b;font-weight:500;user-select:none;white-space:nowrap;background:#122015}
-.table th.sortable{cursor:pointer}
-.table td{padding:8px 12px;border-bottom:1px solid #1a302018;font-size:13px}
-.table tr:last-child td{border-bottom:none}
-.table tbody tr:hover td{background:#12201530}
-.status-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:500}
-.action-btn{padding:5px;border-radius:6px;background:transparent;border:none;cursor:pointer;display:inline-flex;transition:background .1s}
-.action-btn:hover{background:#ffffff14}
-.form-group{margin-bottom:12px}
+
+/* ── Sidebar ── */
+#sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--sb-w);background:var(--sb-bg);display:flex;flex-direction:column;z-index:200;transition:transform .25s ease;box-shadow:4px 0 20px rgba(0,0,0,.15)}
+#sidebar.hidden{transform:translateX(calc(-1 * var(--sb-w)))}
+#sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199}
+#main{margin-left:var(--sb-w);transition:margin-left .25s ease;min-height:100vh;padding:22px 24px}
+#main.full{margin-left:0}
+#toggle-btn{position:fixed;top:14px;left:14px;z-index:300;width:36px;height:36px;border-radius:9px;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(34,197,94,.4);transition:all .2s}
+#toggle-btn:hover{background:var(--accent-d)}
+#toggle-btn.shifted{left:calc(var(--sb-w) + 10px)}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:5px;cursor:pointer;border:none;border-radius:8px;font-family:'Sora',sans-serif;font-weight:500;transition:all .15s;font-size:13px;padding:8px 14px;white-space:nowrap}
+.btn-sm{font-size:11px;padding:5px 10px}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 1px 6px rgba(34,197,94,.3)}.btn-primary:hover{background:var(--accent-d)}
+.btn-secondary{background:var(--card);color:var(--text);border:1.5px solid var(--border)}.btn-secondary:hover{background:var(--surface);border-color:var(--accent)}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:#dc2626}
+.btn-ghost{background:transparent;color:var(--muted);border:1.5px solid transparent}.btn-ghost:hover{background:var(--surface);border-color:var(--border)}
+.btn-wa{background:var(--wa);color:#fff}.btn-wa:hover{background:var(--wa-d)}
+.btn:disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
+
+/* ── Sidebar nav ── */
+.nav-btn{width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;margin-bottom:3px;border:1px solid transparent;cursor:pointer;font-size:12px;font-weight:400;transition:all .15s;text-align:left;background:transparent;color:#94a3b8}
+.nav-btn:hover{background:#1e293b;color:#e2e8f0}
+.nav-btn.active{background:#16a34a22;border-color:#22c55e40;color:#4ade80;font-weight:600}
+.nav-badge{font-size:10px;padding:1px 6px;border-radius:999px;background:#22c55e20;color:#4ade80;margin-left:auto}
+
+/* ── Inputs ── */
+.input{width:100%;padding:8px 12px;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);border:1.5px solid var(--border);outline:none;transition:border-color .15s}
+.input:focus{border-color:var(--accent)}
+.label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:500}
+.form-group{margin-bottom:13px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
-.stat-card{flex:1;min-width:110px;padding:16px 20px;border-radius:14px;transition:all .2s;border:1px solid #1a3020;background:#0d1a0f}
-.stat-card.clickable{cursor:pointer}
-.stat-card.clickable:hover{background:#122015;border-color:#25D36640}
+
+/* ── Cards ── */
+.card{background:var(--card);border:1.5px solid var(--border);border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+
+/* ── Table ── */
+.table{width:100%;border-collapse:collapse}
+.table th{text-align:left;padding:9px 12px;font-size:10px;color:var(--muted);font-weight:600;user-select:none;white-space:nowrap;background:var(--surface);text-transform:uppercase;letter-spacing:.05em}
+.table th.sortable{cursor:pointer}
+.table th.sortable:hover{color:var(--accent)}
+.table td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text)}
+.table tr:last-child td{border-bottom:none}
+.table tbody tr:hover td{background:#f0fdf4}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(8px)}
+.modal{background:var(--card);border:1.5px solid var(--border);border-radius:18px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.modal-header{padding:16px 22px;border-bottom:1.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--card);z-index:1}
+.modal-body{padding:22px}
+
+/* ── Badges ── */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:500}
+
+/* ── Action buttons ── */
+.ab{padding:5px;border-radius:6px;background:transparent;border:none;cursor:pointer;display:inline-flex;transition:background .1s;color:var(--muted)}
+.ab:hover{background:var(--surface)}
+
+/* ── Stat card ── */
+.stat{flex:1;min-width:100px;padding:16px 18px;border-radius:14px;background:var(--card);border:1.5px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.04);transition:all .2s}
+.stat.click{cursor:pointer}.stat.click:hover{border-color:var(--accent);box-shadow:0 4px 12px rgba(34,197,94,.15)}
+
+/* ── Animations ── */
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toastIn{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes slideIn{from{transform:translateX(-10px);opacity:0}to{transform:translateX(0);opacity:1}}
+.spin{animation:spin .7s linear infinite}
+.fade{animation:fadeIn .2s ease}
+
+/* ── Mobile ── */
+@media(max-width:768px){
+  #sidebar{width:100% !important;max-width:280px}
+  #sidebar.hidden{transform:translateX(-100%)}
+  #sb-overlay{display:block}
+  #sb-overlay.hidden{display:none}
+  #main{margin-left:0 !important;padding:14px}
+  #toggle-btn{left:14px !important}
+  #toggle-btn.shifted{left:14px !important}
+  .grid2{grid-template-columns:1fr}
+  .hide-mobile{display:none !important}
+  .table th:nth-child(n+6),.table td:nth-child(n+6){display:none}
+  .stat{min-width:calc(50% - 6px);flex:none}
+  h1{font-size:18px !important}
+  .btn{font-size:12px;padding:7px 11px}
+  .top-bar{flex-wrap:wrap;gap:8px}
+  .top-bar .btn-group{width:100%;justify-content:flex-end}
+}
+@media(max-width:480px){
+  #main{padding:10px}
+  .table th:nth-child(n+5),.table td:nth-child(n+5){display:none}
+  .stat{min-width:calc(50% - 5px)}
+}
 </style>
 </head>
 <body>
-<div style="display:flex;min-height:100vh">
 
-  <!-- Sidebar -->
-  <div style="position:fixed;left:0;top:0;bottom:0;width:200px;background:#0d1a0f;border-right:1px solid #1a3020;display:flex;flex-direction:column;z-index:100">
-    <div style="padding:20px 16px 16px;border-bottom:1px solid #1a3020">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:34px;height:34px;border-radius:10px;background:#25D36620;display:flex;align-items:center;justify-content:center;border:1px solid #25D36640">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-        </div>
-        <div>
-          <p style="font-weight:700;font-size:13px;color:#d4edd8;line-height:1.2">NOSH7 CRM</p>
-          <p style="font-size:10px;color:#6b9b6b">WhatsApp Leads</p>
-        </div>
+<!-- Toggle Button -->
+<button id="toggle-btn" class="shifted" onclick="toggleSidebar()" title="Toggle sidebar">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="toggle-icon">
+    <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+  </svg>
+</button>
+
+<!-- Sidebar Overlay (mobile) -->
+<div id="sb-overlay" class="hidden" onclick="toggleSidebar()"></div>
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <div style="padding:56px 16px 16px;border-bottom:1px solid #1e293b">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:36px;height:36px;border-radius:11px;background:#25D36625;display:flex;align-items:center;justify-content:center;border:1px solid #25D36650;flex-shrink:0">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
       </div>
-    </div>
-    <nav style="padding:10px 8px;flex:1">
-      <button class="sidebar-btn active" onclick="navigate('dashboard')" id="nav-dashboard">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        Dashboard
-      </button>
-      <button class="sidebar-btn" onclick="navigate('leads')" id="nav-leads">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Leads <span id="leads-count" style="font-size:10px;padding:1px 6px;border-radius:999px;background:#25D36620;color:#25D366;margin-left:auto"></span>
-      </button>
-      <button class="sidebar-btn" onclick="navigate('templates')" id="nav-templates">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        Templates
-      </button>
-      <button class="sidebar-btn" onclick="navigate('categories')" id="nav-categories">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-        Categories
-      </button>
-    </nav>
-    <div style="padding:12px 16px;border-top:1px solid #1a3020;display:flex;align-items:center;gap:6px">
-      <div id="db-dot" style="width:6px;height:6px;border-radius:50%;background:#fbbf24"></div>
-      <p id="db-status" style="font-size:10px;color:#3a6040">Connecting...</p>
+      <div>
+        <p style="font-weight:700;font-size:13px;color:#f1f5f9;line-height:1.2">NOSH7 CRM</p>
+        <p style="font-size:10px;color:#64748b">WhatsApp Leads</p>
+      </div>
     </div>
   </div>
-
-  <!-- Main -->
-  <main id="main" style="margin-left:200px;flex:1;padding:26px 28px;min-height:100vh">
-    <div style="display:flex;justify-content:center;align-items:center;height:60vh">
-      <div style="text-align:center">
-        <div style="width:28px;height:28px;border:2px solid #1a3020;border-top-color:#25D366;border-radius:50%;margin:0 auto 12px" class="spin"></div>
-        <p style="color:#6b9b6b;font-size:13px">Loading your data...</p>
-      </div>
-    </div>
-  </main>
+  <nav style="padding:10px 8px;flex:1;overflow-y:auto">
+    <button class="nav-btn active" onclick="navigate('dashboard')" id="nav-dashboard">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-btn" onclick="navigate('leads')" id="nav-leads">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Leads <span class="nav-badge" id="leads-count">0</span>
+    </button>
+    <button class="nav-btn" onclick="navigate('templates')" id="nav-templates">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Templates
+    </button>
+    <button class="nav-btn" onclick="navigate('categories')" id="nav-categories">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Categories
+    </button>
+  </nav>
+  <div style="padding:12px 16px;border-top:1px solid #1e293b;display:flex;align-items:center;gap:6px">
+    <div id="db-dot" style="width:7px;height:7px;border-radius:50%;background:#f59e0b;flex-shrink:0"></div>
+    <p id="db-status" style="font-size:10px;color:#475569">Connecting...</p>
+  </div>
 </div>
 
-<!-- Modal -->
+<!-- Main Content -->
+<main id="main">
+  <div style="display:flex;justify-content:center;align-items:center;height:60vh;flex-direction:column;gap:12px">
+    <div style="width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%" class="spin"></div>
+    <p style="color:var(--muted);font-size:13px">Loading your CRM...</p>
+  </div>
+</main>
+
+<!-- Modal & Toast -->
 <div id="modal-wrap"></div>
-<!-- Toast -->
-<div id="toast" style="display:none;position:fixed;bottom:22px;right:22px;z-index:2000;padding:11px 16px;border-radius:10px;font-size:12px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.6);animation:toastIn .2s ease;max-width:340px;display:none;align-items:center;gap:8px"></div>
+<div id="toast" style="display:none;position:fixed;bottom:22px;right:22px;z-index:9999;padding:11px 16px;border-radius:11px;font-size:12px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.15);animation:toastIn .2s ease;max-width:340px;align-items:center;gap:8px"></div>
 
 <script>
-// ── CONFIG ───────────────────────────────────────────────────────────────────
-const URL_BASE = "https://doesbktbrslcrdhmemhn.supabase.co/rest/v1";
-const API_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZXNia3RicnNsY3JkaG1lbWhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDY3NTEsImV4cCI6MjA4ODU4Mjc1MX0.cl93JTGAIJI36H68X5WOpZUV8TWea8ItotFwOTQU8NI";
+// ── API ───────────────────────────────────────────────────────────────────────
+const BASE = "https://doesbktbrslcrdhmemhn.supabase.co/rest/v1";
+const KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZXNia3RicnNsY3JkaG1lbWhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDY3NTEsImV4cCI6MjA4ODU4Mjc1MX0.cl93JTGAIJI36H68X5WOpZUV8TWea8ItotFwOTQU8NI";
+const H = {"Content-Type":"application/json","apikey":KEY,"Authorization":"Bearer "+KEY,"Prefer":"return=representation"};
 
-const HDR = {
-  "Content-Type": "application/json",
-  "apikey": API_KEY,
-  "Authorization": "Bearer " + API_KEY,
-  "Prefer": "return=representation"
+const api = {
+  get: async (t,q="") => { const r=await fetch(`${BASE}/${t}?${q}`,{headers:H}); if(!r.ok)throw new Error(await r.text()); return r.json(); },
+  post: async (t,d) => { const r=await fetch(`${BASE}/${t}`,{method:"POST",headers:H,body:JSON.stringify(Array.isArray(d)?d:[d])}); if(!r.ok)throw new Error(await r.text()); return r.json(); },
+  patch: async (t,d,q) => { const r=await fetch(`${BASE}/${t}?${q}`,{method:"PATCH",headers:H,body:JSON.stringify(d)}); if(!r.ok)throw new Error(await r.text()); return r.json(); },
+  del: async (t,q) => { const r=await fetch(`${BASE}/${t}?${q}`,{method:"DELETE",headers:H}); if(!r.ok)throw new Error(await r.text()); },
 };
 
-// Direct REST API — no SDK, no library
-async function dbGet(table, params = "") {
-  const r = await fetch(`${URL_BASE}/${table}?${params}`, { headers: HDR });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
-}
-async function dbInsert(table, data) {
-  const r = await fetch(`${URL_BASE}/${table}`, {
-    method: "POST", headers: HDR, body: JSON.stringify(Array.isArray(data) ? data : [data])
-  });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
-}
-async function dbUpdate(table, data, match) {
-  const params = Object.entries(match).map(([k,v])=>`${k}=eq.${v}`).join("&");
-  const r = await fetch(`${URL_BASE}/${table}?${params}`, {
-    method: "PATCH", headers: HDR, body: JSON.stringify(data)
-  });
-  if (!r.ok) throw new Error(await r.text());
-  return r.json();
-}
-async function dbDelete(table, match) {
-  const params = Array.isArray(match)
-    ? `id=in.(${match.join(",")})`
-    : Object.entries(match).map(([k,v])=>`${k}=eq.${v}`).join("&");
-  const r = await fetch(`${URL_BASE}/${table}?${params}`, { method: "DELETE", headers: HDR });
-  if (!r.ok) throw new Error(await r.text());
-}
-
-// ── STATE ────────────────────────────────────────────────────────────────────
+// ── STATE ─────────────────────────────────────────────────────────────────────
 const S = {
-  leads: [], templates: [], categories: [], tab: "dashboard",
-  filter: { search:"", status:"all", category:"all", sort:"created_date", dir:"desc", page:1 },
-  sel: new Set()
+  leads:[], templates:[], categories:[], tab:"dashboard",
+  f:{search:"",status:"all",category:"all",sort:"created_date",dir:"desc",page:1},
+  sel:new Set(), sidebarOpen:true
 };
 
 const STATUSES = ["New","Contacted","Interested","Follow Up","Converted","Not Interested","Lost"];
-const SC = { New:"#60a5fa", Contacted:"#34d399", Interested:"#a78bfa", "Follow Up":"#fbbf24", Converted:"#4ade80", "Not Interested":"#f87171", Lost:"#6b7280" };
+const SC = {New:"#3b82f6",Contacted:"#10b981",Interested:"#8b5cf6","Follow Up":"#f59e0b",Converted:"#22c55e","Not Interested":"#ef4444",Lost:"#94a3b8"};
 const PER = 10;
-const DEF_TPL = [
-  {id:"t1", name:"Initial Greeting", message:"Hello {name}! 👋 I came across your inquiry and would love to help you find the perfect property. When would be a good time to connect?"},
-  {id:"t2", name:"Follow Up", message:"Hi {name}, just following up on our last conversation. Any questions? Happy to help! 😊"},
-  {id:"t3", name:"New Listing", message:"Hi {name}! 🏠 I have an exciting new listing matching your requirements. Want to schedule a visit?"},
-  {id:"t4", name:"Post Meeting", message:"Thank you for your time today, {name}! Wonderful meeting you. Sending the proposal shortly. 🙏"},
+const DEF_T = [
+  {id:"t1",name:"Initial Greeting",message:"Hello {name}! 👋 I came across your inquiry and would love to help. When would be a good time to connect?"},
+  {id:"t2",name:"Follow Up",message:"Hi {name}, just following up on our last conversation. Any questions? Happy to help! 😊"},
+  {id:"t3",name:"New Listing",message:"Hi {name}! 🏠 I have a new listing matching your requirements. Want to schedule a visit?"},
+  {id:"t4",name:"Post Meeting",message:"Thank you for your time today, {name}! I'll send the proposal shortly. 🙏"},
 ];
-const DEF_CAT = ["Residential","Commercial","Investment","Rental","Industrial"];
+const DEF_C = ["Residential","Commercial","Investment","Rental","Industrial"];
 
-// ── HELPERS ──────────────────────────────────────────────────────────────────
+// ── UTILS ─────────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 const today = () => new Date().toISOString().split("T")[0];
 
-let toastTimer;
-function toast(msg, type = "ok") {
-  const el = $("toast");
-  el.style.cssText = `display:flex;position:fixed;bottom:22px;right:22px;z-index:2000;align-items:center;gap:8px;padding:11px 16px;border-radius:10px;font-size:12px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.6);animation:toastIn .2s ease;max-width:340px;${type==="err"?"background:#2a0a0a;border:1px solid #f8717160;color:#f87171":"background:#0e2a18;border:1px solid #25D36660;color:#25D366"}`;
-  el.innerHTML = (type==="err" ? "⚠ " : "✓ ") + msg;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.style.display="none"; }, 3500);
+let _toast;
+function toast(msg, type="ok"){
+  const e=$("toast");
+  const bg=type==="ok"?"background:#f0fdf4;border:1.5px solid #86efac;color:#166534":"background:#fef2f2;border:1.5px solid #fca5a5;color:#991b1b";
+  e.style.cssText=`display:flex;position:fixed;bottom:22px;right:22px;z-index:9999;align-items:center;gap:8px;padding:11px 16px;border-radius:11px;font-size:12px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.12);animation:toastIn .2s ease;max-width:340px;${bg}`;
+  e.innerHTML=(type==="ok"?"✅ ":"⚠️ ")+msg;
+  clearTimeout(_toast); _toast=setTimeout(()=>e.style.display="none",3500);
 }
 
-function badge(status) {
-  const c = SC[status] || "#6b7280";
-  return `<span class="status-badge" style="background:${c}18;color:${c};border:1px solid ${c}30"><span style="width:5px;height:5px;border-radius:50%;background:${c}"></span>${status}</span>`;
+function closeModal(){ $("modal-wrap").innerHTML=""; }
+function modal(html, mw=540){
+  $("modal-wrap").innerHTML=`<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal" style="max-width:${mw}px">${html}</div></div>`;
+}
+function mClose(){ return `<button onclick="closeModal()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;line-height:1;padding:2px 6px;border-radius:6px" title="Close">✕</button>`; }
+
+function badge(st){
+  const c=SC[st]||"#94a3b8";
+  return `<span class="badge" style="background:${c}18;color:${c};border:1px solid ${c}30"><span style="width:5px;height:5px;border-radius:50%;background:${c};flex-shrink:0"></span>${st}</span>`;
 }
 
-function closeModal() { $("modal-wrap").innerHTML = ""; }
-
-function modal(inner, maxW = 520) {
-  $("modal-wrap").innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal" style="max-width:${maxW}px">${inner}</div></div>`;
+function setDbStatus(ok){
+  $("db-dot").style.background=ok?"#22c55e":"#ef4444";
+  $("db-status").textContent=ok?"Supabase live":"DB error";
 }
+function setCount(){ const e=$("leads-count"); if(e) e.textContent=S.leads.length; }
 
-function modalClose() {
-  return `<button onclick="closeModal()" style="background:none;border:none;cursor:pointer;color:#6b9b6b;padding:4px">✕</button>`;
-}
-
-function setDbStatus(ok) {
-  $("db-dot").style.background = ok ? "#25D366" : "#f87171";
-  $("db-status").textContent = ok ? "Supabase live" : "DB error";
-}
-
-function setLeadsCount() {
-  const el = $("leads-count");
-  if (el) el.textContent = S.leads.length;
-}
-
-function navigate(tab) {
-  S.tab = tab;
-  document.querySelectorAll(".sidebar-btn").forEach(b => b.classList.remove("active"));
-  $("nav-" + tab)?.classList.add("active");
+function navigate(tab, closeSb=true){
+  S.tab=tab;
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+  $("nav-"+tab)?.classList.add("active");
+  // Auto-close sidebar on mobile after navigation
+  if(closeSb && window.innerWidth<=768) toggleSidebar(false);
   render();
 }
 
-// ── INIT ─────────────────────────────────────────────────────────────────────
-async function init() {
-  try {
-    const [leads, tpls, cats] = await Promise.all([
-      dbGet("leads", "order=created_date.desc"),
-      dbGet("templates"),
-      dbGet("categories")
-    ]);
-    S.leads = leads;
-
-    if (!tpls.length) { await dbInsert("templates", DEF_TPL); S.templates = DEF_TPL; }
-    else S.templates = tpls;
-
-    if (!cats.length) {
-      await dbInsert("categories", DEF_CAT.map(n => ({name:n})));
-      S.categories = DEF_CAT;
-    } else S.categories = cats.map(r => r.name);
-
-    setDbStatus(true);
-    setLeadsCount();
-    render();
-  } catch(e) {
-    console.error(e);
-    setDbStatus(false);
-    S.templates = DEF_TPL; S.categories = DEF_CAT;
-    toast("DB error: " + e.message, "err");
-    render();
+// ── SIDEBAR ───────────────────────────────────────────────────────────────────
+function toggleSidebar(forceState){
+  const open = forceState !== undefined ? forceState : !S.sidebarOpen;
+  S.sidebarOpen = open;
+  const sb=$("sidebar"), main=$("main"), btn=$("toggle-btn"), ov=$("sb-overlay");
+  if(open){
+    sb.classList.remove("hidden");
+    if(window.innerWidth>768){ main.classList.remove("full"); btn.classList.add("shifted"); }
+    else { ov.classList.remove("hidden"); btn.classList.add("shifted"); }
+  } else {
+    sb.classList.add("hidden"); main.classList.add("full"); btn.classList.remove("shifted");
+    ov.classList.add("hidden");
   }
 }
 
-// ── RENDER ───────────────────────────────────────────────────────────────────
-function render() {
-  const m = $("main");
-  if (!m) return;
-  if (S.tab === "dashboard")  m.innerHTML = renderDash();
-  if (S.tab === "leads")      m.innerHTML = renderLeads();
-  if (S.tab === "templates")  m.innerHTML = renderTpls();
-  if (S.tab === "categories") m.innerHTML = renderCats();
+// Init sidebar state based on screen size
+function initSidebar(){
+  if(window.innerWidth<=768){ toggleSidebar(false); } else { toggleSidebar(true); }
+}
+window.addEventListener("resize",()=>{ if(window.innerWidth>768 && S.sidebarOpen){ $("main").classList.remove("full"); $("toggle-btn").classList.add("shifted"); } });
+
+// ── COLUMN MAPPER (smart CSV/Excel) ──────────────────────────────────────────
+function mapCol(headers){
+  const m={};
+  headers.forEach((h,i)=>{
+    const k=h.toLowerCase().replace(/[\s_\-\.]/g,"");
+    if(!m.name      && (k==="name"||k==="fullname"||k==="leadname"||k==="customername")) m.name=i;
+    if(!m.phone     && (k.includes("phone")||k.includes("mobile")||k.includes("contact")||k.includes("cell")||k.includes("whatsapp"))) m.phone=i;
+    if(!m.email     && (k.includes("email")||k.includes("mail"))) m.email=i;
+    if(!m.website   && (k.includes("website")||k.includes("web")||k.includes("url")||k.includes("site"))) m.website=i;
+    if(!m.address   && (k.includes("address")||k.includes("addr")||k.includes("street")||k.includes("location"))) m.address=i;
+    if(!m.area      && (k.includes("area")||k.includes("zone")||k.includes("locality")||k.includes("region")||k.includes("city"))) m.area=i;
+    if(!m.category  && (k.includes("category")||k.includes("cat")||k.includes("type")||k.includes("segment"))) m.category=i;
+    if(!m.status    && k.includes("status")) m.status=i;
+    if(!m.notes     && (k.includes("note")||k.includes("remark")||k.includes("comment")||k.includes("description"))) m.notes=i;
+    if(!m.follow_up_date && (k.includes("follow")||k.includes("followup")||k.includes("fudate")||k.includes("nextcall"))) m.follow_up_date=i;
+    if(!m.last_contacted && (k.includes("last")&&(k.includes("contact")||k.includes("called")||k.includes("spoke")))) m.last_contacted=i;
+  });
+  return m;
+}
+
+function rowToLead(vals, m){
+  const g=(k)=>(m[k]!==undefined?vals[m[k]]||"":"");
+  return {
+    id: Date.now().toString()+Math.random().toString(36).slice(2,7),
+    name: g("name"), phone: g("phone"), email: g("email"),
+    website: g("website"), address: g("address"), area: g("area"),
+    category: g("category")||S.categories[0]||"",
+    status: g("status")||"New", notes: g("notes"),
+    follow_up_date: g("follow_up_date"), last_contacted: g("last_contacted"),
+    created_date: today()
+  };
+}
+
+// Parse CSV or Excel file → array of {headers[], rows[][]}
+function parseFile(file){
+  return new Promise((resolve, reject)=>{
+    const ext = file.name.split(".").pop().toLowerCase();
+    if(ext==="csv"||ext==="txt"){
+      const r=new FileReader();
+      r.onload=ev=>{
+        try{
+          const lines=ev.target.result.split(/\r?\n/).filter(l=>l.trim());
+          if(!lines.length){reject(new Error("Empty file")); return;}
+          const headers=lines[0].split(",").map(h=>h.replace(/^"|"$/g,"").trim());
+          const rows=lines.slice(1).map(l=>l.split(",").map(v=>v.replace(/^"|"$/g,"").trim()));
+          resolve({headers,rows});
+        }catch(e){reject(e);}
+      };
+      r.onerror=()=>reject(new Error("Read failed"));
+      r.readAsText(file);
+    } else if(ext==="xlsx"||ext==="xls"||ext==="ods"){
+      const r=new FileReader();
+      r.onload=ev=>{
+        try{
+          const wb=XLSX.read(ev.target.result,{type:"binary"});
+          const ws=wb.Sheets[wb.SheetNames[0]];
+          const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+          if(!data.length){reject(new Error("Empty sheet")); return;}
+          const headers=data[0].map(h=>String(h).trim());
+          const rows=data.slice(1).map(r=>r.map(v=>String(v).trim()));
+          resolve({headers,rows});
+        }catch(e){reject(e);}
+      };
+      r.onerror=()=>reject(new Error("Read failed"));
+      r.readAsBinaryString(file);
+    } else {
+      reject(new Error("Unsupported file type. Use CSV, XLS, or XLSX."));
+    }
+  });
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+async function init(){
+  initSidebar();
+  try{
+    const [leads,tpls,cats]=await Promise.all([
+      api.get("leads","order=created_date.desc"),
+      api.get("templates"),
+      api.get("categories")
+    ]);
+    S.leads=leads||[];
+    S.templates=tpls?.length ? tpls : (await api.post("templates",DEF_T), DEF_T);
+    S.categories=cats?.length ? cats.map(r=>r.name) : (await api.post("categories",DEF_C.map(n=>({name:n}))), DEF_C);
+    setDbStatus(true); setCount(); render();
+  }catch(e){
+    console.error(e); setDbStatus(false);
+    S.templates=DEF_T; S.categories=DEF_C;
+    toast("DB error: "+e.message,"err"); render();
+  }
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function render(){
+  const m=$("main"); if(!m) return;
+  if(S.tab==="dashboard")  m.innerHTML=renderDash();
+  if(S.tab==="leads")      m.innerHTML=renderLeads();
+  if(S.tab==="templates")  m.innerHTML=renderTpls();
+  if(S.tab==="categories") m.innerHTML=renderCats();
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
-function renderDash() {
-  const l = S.leads, t = today();
-  const stats = [
-    {label:"Total Leads", val:l.length, color:"#25D366"},
-    {label:"New", val:l.filter(x=>x.status==="New").length, color:"#60a5fa", click:true},
-    {label:"Interested", val:l.filter(x=>x.status==="Interested").length, color:"#a78bfa"},
-    {label:"Follow Up Today", val:l.filter(x=>x.follow_up_date===t).length, color:"#fbbf24"},
-    {label:"Converted", val:l.filter(x=>x.status==="Converted").length, color:"#4ade80"},
+function renderDash(){
+  const l=S.leads, t=today();
+  const st=[
+    {lbl:"Total Leads",v:l.length,c:"#22c55e"},
+    {lbl:"New",v:l.filter(x=>x.status==="New").length,c:"#3b82f6",click:true},
+    {lbl:"Interested",v:l.filter(x=>x.status==="Interested").length,c:"#8b5cf6"},
+    {lbl:"Follow Up Today",v:l.filter(x=>x.follow_up_date===t).length,c:"#f59e0b"},
+    {lbl:"Converted",v:l.filter(x=>x.status==="Converted").length,c:"#22c55e"},
   ];
-  const dist = STATUSES.map(s=>({s,n:l.filter(x=>x.status===s).length,c:SC[s]})).filter(d=>d.n>0);
-  const maxN = Math.max(...dist.map(d=>d.n), 1);
-  const cats = S.categories.map(c=>({c,n:l.filter(x=>x.category===c).length})).filter(x=>x.n>0);
-  const recent = [...l].sort((a,b)=>(b.created_date||"").localeCompare(a.created_date||"")).slice(0,5);
-
-  return `<div class="fade">
-    <div style="margin-bottom:22px">
-      <h1 style="font-size:22px;font-weight:700;color:#d4edd8">Dashboard</h1>
-      <p style="color:#6b9b6b;font-size:12px;margin-top:2px">${new Date().toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</p>
+  const dist=STATUSES.map(s=>({s,n:l.filter(x=>x.status===s).length,c:SC[s]})).filter(d=>d.n>0);
+  const maxN=Math.max(...dist.map(d=>d.n),1);
+  const cats=S.categories.map(c=>({c,n:l.filter(x=>x.category===c).length})).filter(x=>x.n>0);
+  const recent=[...l].sort((a,b)=>(b.created_date||"").localeCompare(a.created_date||"")).slice(0,5);
+  return `<div class="fade" style="padding-top:8px">
+    <div style="margin-bottom:20px">
+      <h1 style="font-size:22px;font-weight:700;color:var(--text)">Dashboard</h1>
+      <p style="color:var(--muted);font-size:12px;margin-top:3px">${new Date().toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</p>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
-      ${stats.map(s=>`<div class="stat-card ${s.click?"clickable":""}" ${s.click?'onclick="navigate(\'leads\')"':""}>
-        <p style="color:#6b9b6b;font-size:11px;margin-bottom:6px">${s.label}</p>
-        <p style="font-size:28px;font-weight:700;color:${s.color};line-height:1">${s.val}</p>
+      ${st.map(s=>`<div class="stat ${s.click?"click":""}" ${s.click?'onclick="navigate(\'leads\')"':""}>
+        <p style="color:var(--muted);font-size:11px;margin-bottom:5px;font-weight:500">${s.lbl}</p>
+        <p style="font-size:26px;font-weight:700;color:${s.c};line-height:1">${s.v}</p>
       </div>`).join("")}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
       <div class="card" style="padding:18px">
-        <p style="font-weight:600;font-size:13px;color:#d4edd8;margin-bottom:14px">Status Distribution</p>
-        ${dist.length ? dist.map(({s,n,c})=>`
-          <div style="margin-bottom:10px">
-            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-              <span style="font-size:11px;color:#6b9b6b">${s}</span>
-              <span style="font-size:11px;font-weight:600;color:${c}">${n}</span>
-            </div>
-            <div style="height:5px;background:#122015;border-radius:999px">
-              <div style="height:100%;width:${(n/maxN)*100}%;background:${c};border-radius:999px"></div>
-            </div>
-          </div>`).join("") : '<p style="color:#6b9b6b;font-size:12px">No data yet</p>'}
+        <p style="font-weight:600;font-size:13px;color:var(--text);margin-bottom:14px">Status Distribution</p>
+        ${dist.length?dist.map(({s,n,c})=>`<div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:11px;color:var(--muted)">${s}</span>
+            <span style="font-size:11px;font-weight:600;color:${c}">${n}</span>
+          </div>
+          <div style="height:6px;background:var(--surface);border-radius:999px;border:1px solid var(--border)">
+            <div style="height:100%;width:${(n/maxN)*100}%;background:${c};border-radius:999px;transition:width .6s ease"></div>
+          </div></div>`).join(""):"<p style='color:var(--muted);font-size:12px'>No data yet</p>"}
       </div>
       <div class="card" style="padding:18px">
-        <p style="font-weight:600;font-size:13px;color:#d4edd8;margin-bottom:14px">Category Breakdown</p>
-        ${cats.length ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${cats.map(({c,n})=>`
-          <div style="background:#122015;border-radius:9px;padding:12px 13px;border:1px solid #1a3020">
-            <p style="font-size:22px;font-weight:700;color:#25D366;line-height:1">${n}</p>
-            <p style="font-size:11px;color:#6b9b6b;margin-top:3px">${c}</p>
-          </div>`).join("")}</div>` : '<p style="color:#6b9b6b;font-size:12px">No data yet</p>'}
+        <p style="font-weight:600;font-size:13px;color:var(--text);margin-bottom:14px">Categories</p>
+        ${cats.length?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${cats.map(({c,n})=>`
+          <div style="background:var(--surface);border-radius:10px;padding:11px 13px;border:1.5px solid var(--border)">
+            <p style="font-size:20px;font-weight:700;color:var(--accent);line-height:1">${n}</p>
+            <p style="font-size:11px;color:var(--muted);margin-top:3px">${c}</p>
+          </div>`).join("")}</div>`:"<p style='color:var(--muted);font-size:12px'>No data yet</p>"}
       </div>
     </div>
-    ${recent.length ? `<div class="card" style="padding:18px">
-      <p style="font-weight:600;font-size:13px;color:#d4edd8;margin-bottom:14px">Recently Added</p>
-      <table class="table"><thead><tr>
-        <th>Name</th><th>Phone</th><th>Status</th><th>Category</th><th>Date</th>
-      </tr></thead><tbody>
-      ${recent.map(l=>`<tr>
-        <td style="font-weight:500;color:#d4edd8">${l.name}</td>
-        <td style="font-family:monospace;color:#6b9b6b">${l.phone}</td>
-        <td>${badge(l.status)}</td>
-        <td style="color:#6b9b6b">${l.category||"—"}</td>
-        <td style="color:#6b9b6b">${l.created_date||"—"}</td>
-      </tr>`).join("")}
-      </tbody></table>
-    </div>` : ""}
+    ${recent.length?`<div class="card" style="padding:18px">
+      <p style="font-weight:600;font-size:13px;color:var(--text);margin-bottom:14px">Recently Added</p>
+      <div style="overflow-x:auto"><table class="table">
+        <thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Category</th><th>Date</th></tr></thead>
+        <tbody>${recent.map(l=>`<tr>
+          <td style="font-weight:500">${l.name}</td>
+          <td style="font-family:monospace;color:var(--muted);font-size:11px">${l.phone}</td>
+          <td>${badge(l.status)}</td>
+          <td style="color:var(--muted)">${l.category||"—"}</td>
+          <td style="color:var(--muted);font-size:11px">${l.created_date||"—"}</td>
+        </tr>`).join("")}</tbody>
+      </table></div></div>`:""}
   </div>`;
 }
 
 // ── LEADS ─────────────────────────────────────────────────────────────────────
-function filtered() {
-  const f = S.filter;
-  let r = [...S.leads];
-  if (f.search) {
-    const q = f.search.toLowerCase();
-    r = r.filter(l => (l.name||"").toLowerCase().includes(q)||(l.phone||"").includes(q)||(l.email||"").toLowerCase().includes(q)||(l.area||"").toLowerCase().includes(q));
-  }
-  if (f.status !== "all") r = r.filter(l => l.status === f.status);
-  if (f.category !== "all") r = r.filter(l => l.category === f.category);
-  r.sort((a,b) => {
-    const av = a[f.sort]||"", bv = b[f.sort]||"";
-    return f.dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
-  });
+function filteredLeads(){
+  const f=S.f; let r=[...S.leads];
+  if(f.search){ const q=f.search.toLowerCase(); r=r.filter(l=>(l.name||"").toLowerCase().includes(q)||(l.phone||"").includes(q)||(l.email||"").toLowerCase().includes(q)||(l.area||"").toLowerCase().includes(q)||(l.category||"").toLowerCase().includes(q)); }
+  if(f.status!=="all") r=r.filter(l=>l.status===f.status);
+  if(f.category!=="all") r=r.filter(l=>l.category===f.category);
+  r.sort((a,b)=>{ const av=a[f.sort]||"",bv=b[f.sort]||""; return f.dir==="asc"?av.localeCompare(bv):bv.localeCompare(av); });
   return r;
 }
 
-function renderLeads() {
-  const f = S.filter;
-  const rows = filtered();
-  const pages = Math.ceil(rows.length / PER) || 1;
-  const paged = rows.slice((f.page-1)*PER, f.page*PER);
-  const selN = S.sel.size;
-  const arr = field => f.sort===field ? (f.dir==="asc"?"▲":"▼") : "";
-  const allChk = selN === paged.length && paged.length > 0;
-
-  const pgBtns = () => {
-    let h = `<button class="btn btn-secondary btn-sm" onclick="lPage(${Math.max(1,f.page-1)})" ${f.page===1?"disabled":""}>‹</button>`;
-    const s = Math.max(1, Math.min(pages-4, f.page-2));
-    for (let i=0; i<Math.min(5,pages); i++) {
-      const p = s+i;
-      h += `<button class="btn ${p===f.page?"btn-primary":"btn-secondary"} btn-sm" onclick="lPage(${p})">${p}</button>`;
-    }
-    h += `<button class="btn btn-secondary btn-sm" onclick="lPage(${Math.min(pages,f.page+1)})" ${f.page===pages?"disabled":""}>›</button>`;
-    return h;
+function renderLeads(){
+  const f=S.f, rows=filteredLeads(), pages=Math.ceil(rows.length/PER)||1;
+  const paged=rows.slice((f.page-1)*PER, f.page*PER);
+  const selN=S.sel.size, allChk=selN===paged.length&&paged.length>0;
+  const arr=field=>f.sort===field?(f.dir==="asc"?"▲":"▼"):"";
+  const pgBtns=()=>{
+    let h=`<button class="btn btn-secondary btn-sm" onclick="lPage(${Math.max(1,f.page-1)})" ${f.page===1?"disabled":""}>‹</button>`;
+    const s=Math.max(1,Math.min(pages-4,f.page-2));
+    for(let i=0;i<Math.min(5,pages);i++){const p=s+i;h+=`<button class="btn ${p===f.page?"btn-primary":"btn-secondary"} btn-sm" onclick="lPage(${p})">${p}</button>`;}
+    return h+`<button class="btn btn-secondary btn-sm" onclick="lPage(${Math.min(pages,f.page+1)})" ${f.page===pages?"disabled":""}>›</button>`;
   };
-
-  return `<div class="fade">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+  return `<div class="fade" style="padding-top:8px">
+    <div class="top-bar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px">
       <div>
-        <h1 style="font-size:22px;font-weight:700;color:#d4edd8">Leads</h1>
-        <p style="color:#6b9b6b;font-size:12px">${rows.length} leads${f.search||f.status!=="all"||f.category!=="all"?" (filtered)":""}</p>
+        <h1 style="font-size:22px;font-weight:700;color:var(--text)">Leads</h1>
+        <p style="color:var(--muted);font-size:12px">${rows.length} leads${f.search||f.status!=="all"||f.category!=="all"?" (filtered)":""}</p>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div class="btn-group" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
         <label class="btn btn-secondary btn-sm" style="cursor:pointer">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
-          Import CSV <input type="file" accept=".csv" onchange="importCSV(event)" style="display:none">
+          📂 Import <input type="file" accept=".csv,.xls,.xlsx,.ods" onchange="openImportPreview(event)" style="display:none">
         </label>
-        <button class="btn btn-secondary btn-sm" onclick="exportCSV()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Export CSV
-        </button>
-        <button class="btn btn-primary btn-sm" onclick="openLeadForm()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add Lead
-        </button>
+        <button class="btn btn-secondary btn-sm" onclick="exportCSV()">⬇ Export</button>
+        <button class="btn btn-primary btn-sm" onclick="openLeadForm()">＋ Add Lead</button>
       </div>
     </div>
-
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-      <div style="position:relative;flex:1;min-width:200px">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b9b6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:10px;top:50%;transform:translateY(-50%)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input class="input" style="padding-left:30px;font-size:12px" placeholder="Search name, phone, area..." value="${f.search}" oninput="lFilter('search',this.value)">
+      <div style="position:relative;flex:1;min-width:160px">
+        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px">🔍</span>
+        <input class="input" style="padding-left:30px;font-size:12px" placeholder="Search name, phone, area, category..." value="${f.search}" oninput="lFilter('search',this.value)">
       </div>
-      <select class="input" style="width:auto;padding:7px 10px;font-size:12px;cursor:pointer" onchange="lFilter('status',this.value)">
+      <select class="input" style="width:auto;padding:8px 10px;font-size:12px;cursor:pointer" onchange="lFilter('status',this.value)">
         <option value="all" ${f.status==="all"?"selected":""}>All Status</option>
         ${STATUSES.map(s=>`<option ${f.status===s?"selected":""}>${s}</option>`).join("")}
       </select>
-      <select class="input" style="width:auto;padding:7px 10px;font-size:12px;cursor:pointer" onchange="lFilter('category',this.value)">
+      <select class="input" style="width:auto;padding:8px 10px;font-size:12px;cursor:pointer" onchange="lFilter('category',this.value)">
         <option value="all" ${f.category==="all"?"selected":""}>All Categories</option>
         ${S.categories.map(c=>`<option ${f.category===c?"selected":""}>${c}</option>`).join("")}
       </select>
     </div>
-
-    ${selN ? `<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:#0e2a18;border:1px solid #25D36640;border-radius:9px;margin-bottom:10px;flex-wrap:wrap">
-      <span style="font-size:12px;color:#25D366;font-weight:600">${selN} selected</span>
+    ${selN?`<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--accent-dim);border:1.5px solid #86efac;border-radius:10px;margin-bottom:10px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--accent-d);font-weight:600">✓ ${selN} selected</span>
       <div style="flex:1"></div>
-      <button class="btn btn-teal btn-sm" onclick="openBulkModal()">Bulk Update</button>
+      <button class="btn btn-secondary btn-sm" onclick="openBulkModal()">📝 Bulk Update</button>
       <button class="btn btn-danger btn-sm" onclick="bulkDelete()">🗑 Delete</button>
       <button class="btn btn-ghost btn-sm" onclick="S.sel=new Set();render()">✕ Clear</button>
-    </div>` : ""}
-
+    </div>`:""}
     <div class="card" style="overflow:hidden">
       <div style="overflow-x:auto">
-        <table class="table" style="min-width:820px">
+        <table class="table" style="min-width:800px">
           <thead><tr>
-            <th style="width:36px"><input type="checkbox" ${allChk?"checked":""} onchange="toggleAll(this.checked)" style="accent-color:#25D366;cursor:pointer"></th>
+            <th style="width:36px"><input type="checkbox" ${allChk?"checked":""} onchange="toggleAll(this.checked)" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px"></th>
             <th class="sortable" onclick="lSort('name')">Name ${arr("name")}</th>
             <th class="sortable" onclick="lSort('phone')">Phone ${arr("phone")}</th>
             <th class="sortable" onclick="lSort('status')">Status ${arr("status")}</th>
-            <th class="sortable" onclick="lSort('category')">Category ${arr("category")}</th>
-            <th class="sortable" onclick="lSort('area')">Area ${arr("area")}</th>
-            <th class="sortable" onclick="lSort('follow_up_date')">Follow Up ${arr("follow_up_date")}</th>
-            <th class="sortable" onclick="lSort('last_contacted')">Last Contact ${arr("last_contacted")}</th>
+            <th class="sortable hide-mobile" onclick="lSort('category')">Category ${arr("category")}</th>
+            <th class="sortable hide-mobile" onclick="lSort('area')">Area ${arr("area")}</th>
+            <th class="sortable hide-mobile" onclick="lSort('follow_up_date')">Follow Up ${arr("follow_up_date")}</th>
+            <th class="hide-mobile" style="color:var(--muted);font-size:10px">Last Contact</th>
             <th>Actions</th>
           </tr></thead>
           <tbody>
-            ${paged.length === 0
-              ? `<tr><td colspan="9" style="padding:40px;text-align:center;color:#6b9b6b">No leads found</td></tr>`
-              : paged.map(l => {
-                  const sel = S.sel.has(l.id);
-                  const overdue = l.follow_up_date && l.follow_up_date < today();
-                  const fuColor = overdue ? "#f87171" : l.follow_up_date ? "#fbbf24" : "#6b9b6b";
-                  return `<tr style="background:${sel?"#0e2a1870":"transparent"}">
-                    <td><input type="checkbox" ${sel?"checked":""} onchange="toggleOne('${l.id}',this.checked)" style="accent-color:#25D366;cursor:pointer"></td>
-                    <td>
-                      <div style="font-weight:500;color:#d4edd8">${l.name}</div>
-                      ${l.email?`<div style="font-size:10px;color:#6b9b6b;margin-top:1px">${l.email}</div>`:""}
-                    </td>
-                    <td style="font-family:monospace;color:#6b9b6b;font-size:11px">${l.phone}</td>
-                    <td>${badge(l.status)}</td>
-                    <td style="color:#6b9b6b;font-size:12px">${l.category||"—"}</td>
-                    <td style="color:#6b9b6b;font-size:12px">${l.area||"—"}</td>
-                    <td style="color:${fuColor};font-size:11px">${l.follow_up_date||"—"}</td>
-                    <td style="color:#6b9b6b;font-size:11px">${l.last_contacted||"—"}</td>
-                    <td>
-                      <div style="display:flex;gap:1px;flex-wrap:nowrap">
-                        <button class="action-btn" title="WhatsApp" onclick="openWpModal('${l.id}')">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-                        </button>
-                        ${l.email?`<button class="action-btn" title="Email" onclick="window.open('mailto:${l.email}')">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                        </button>`:""}
-                        <button class="action-btn" title="Call" onclick="window.open('tel:${l.phone}')">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.5 19.79 19.79 0 0 1 1.6 4.88 2 2 0 0 1 3.56 2.69h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.1a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
-                        </button>
-                        ${l.website?`<button class="action-btn" title="Website" onclick="window.open('https://${l.website}','_blank')">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                        </button>`:""}
-                        <button class="action-btn" title="Edit" onclick="openLeadForm('${l.id}')">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b9b6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        </button>
-                        <button class="action-btn" title="Delete" onclick="deleteLead('${l.id}')">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>`;
-                }).join("")}
+            ${paged.length===0?`<tr><td colspan="9" style="padding:40px;text-align:center;color:var(--muted)">No leads found. Add your first lead!</td></tr>`
+            :paged.map(l=>{
+              const sel=S.sel.has(l.id);
+              const overdue=l.follow_up_date&&l.follow_up_date<today();
+              return `<tr style="background:${sel?"#f0fdf4":"transparent"}">
+                <td><input type="checkbox" ${sel?"checked":""} onchange="toggleOne('${l.id}',this.checked)" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px"></td>
+                <td><div style="font-weight:600;color:var(--text)">${l.name}</div>${l.email?`<div style="font-size:10px;color:var(--muted)">${l.email}</div>`:""}</td>
+                <td style="font-family:monospace;color:var(--muted);font-size:11px">${l.phone}</td>
+                <td>${badge(l.status)}</td>
+                <td class="hide-mobile" style="color:var(--muted);font-size:12px">${l.category||"—"}</td>
+                <td class="hide-mobile" style="color:var(--muted);font-size:12px">${l.area||"—"}</td>
+                <td class="hide-mobile" style="color:${overdue?"#ef4444":l.follow_up_date?"#f59e0b":"var(--muted)"};font-size:11px">${l.follow_up_date||"—"}</td>
+                <td class="hide-mobile" style="color:var(--muted);font-size:11px">${l.last_contacted||"—"}</td>
+                <td><div style="display:flex;gap:1px">
+                  <button class="ab" title="WhatsApp" onclick="openWpModal('${l.id}')">💬</button>
+                  ${l.email?`<button class="ab" title="Email" onclick="window.open('mailto:${l.email}')">📧</button>`:""}
+                  <button class="ab" title="Call" onclick="window.open('tel:${l.phone}')">📞</button>
+                  ${l.website?`<button class="ab" title="Website" onclick="window.open('https://${l.website}','_blank')">🌐</button>`:""}
+                  <button class="ab" title="Edit" onclick="openLeadForm('${l.id}')">✏️</button>
+                  <button class="ab" title="Delete" onclick="deleteLead('${l.id}')">🗑</button>
+                </div></td>
+              </tr>`;
+            }).join("")}
           </tbody>
         </table>
       </div>
-      ${pages > 1 ? `<div style="padding:10px 16px;border-top:1px solid #1a3020;display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:11px;color:#6b9b6b">Page ${f.page} of ${pages} · ${rows.length} total</span>
-        <div style="display:flex;gap:5px">${pgBtns()}</div>
-      </div>` : ""}
+      ${pages>1?`<div style="padding:10px 16px;border-top:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <span style="font-size:11px;color:var(--muted)">Page ${f.page} of ${pages} · ${rows.length} total</span>
+        <div style="display:flex;gap:4px">${pgBtns()}</div>
+      </div>`:""}
     </div>
   </div>`;
 }
 
-function lFilter(k, v) { S.filter[k] = v; S.filter.page = 1; render(); }
-function lSort(field) {
-  if (S.filter.sort === field) S.filter.dir = S.filter.dir==="asc"?"desc":"asc";
-  else { S.filter.sort = field; S.filter.dir = "asc"; }
-  render();
-}
-function lPage(p) { S.filter.page = p; render(); }
-function toggleAll(checked) {
-  const paged = filtered().slice((S.filter.page-1)*PER, S.filter.page*PER);
-  if (checked) paged.forEach(l => S.sel.add(l.id)); else S.sel.clear();
-  render();
-}
-function toggleOne(id, checked) { checked ? S.sel.add(id) : S.sel.delete(id); render(); }
+function lFilter(k,v){ S.f[k]=v; S.f.page=1; render(); }
+function lSort(f){ if(S.f.sort===f) S.f.dir=S.f.dir==="asc"?"desc":"asc"; else{S.f.sort=f;S.f.dir="asc";} render(); }
+function lPage(p){ S.f.page=p; render(); }
+function toggleAll(checked){ const paged=filteredLeads().slice((S.f.page-1)*PER,S.f.page*PER); if(checked) paged.forEach(l=>S.sel.add(l.id)); else S.sel.clear(); render(); }
+function toggleOne(id,checked){ checked?S.sel.add(id):S.sel.delete(id); render(); }
 
-async function deleteLead(id) {
-  if (!confirm("Delete this lead?")) return;
-  try {
-    await dbDelete("leads", {id});
-    S.leads = S.leads.filter(l => l.id !== id);
-    S.sel.delete(id);
-    setLeadsCount(); toast("Lead deleted"); render();
-  } catch(e) { toast("Delete failed: "+e.message, "err"); }
+async function deleteLead(id){
+  if(!confirm("Delete this lead?")) return;
+  try{ await api.del("leads",`id=eq.${id}`); S.leads=S.leads.filter(l=>l.id!==id); S.sel.delete(id); setCount(); toast("Lead deleted"); render(); }
+  catch(e){ toast("Delete failed","err"); }
 }
 
-async function bulkDelete() {
-  const ids = [...S.sel];
-  if (!ids.length || !confirm(`Delete ${ids.length} leads?`)) return;
-  try {
-    await dbDelete("leads", ids);
-    S.leads = S.leads.filter(l => !S.sel.has(l.id));
-    S.sel.clear(); setLeadsCount(); toast(`${ids.length} leads deleted`); render();
-  } catch(e) { toast("Error: "+e.message, "err"); }
+async function bulkDelete(){
+  const ids=[...S.sel]; if(!ids.length||!confirm(`Delete ${ids.length} leads?`)) return;
+  try{ await api.del("leads",`id=in.(${ids.join(",")})`); S.leads=S.leads.filter(l=>!S.sel.has(l.id)); S.sel.clear(); setCount(); toast(`${ids.length} leads deleted`); render(); }
+  catch(e){ toast("Error: "+e.message,"err"); }
 }
 
-function exportCSV() {
-  const rows = filtered();
-  const h = ["Name","Phone","Email","Status","Category","Area","Follow Up","Last Contacted","Notes"];
-  const csv = [h.join(","), ...rows.map(l=>[l.name,l.phone,l.email,l.status,l.category,l.area,l.follow_up_date,l.last_contacted,l.notes].map(v=>`"${(v||"").replace(/"/g,'""')}"`).join(","))].join("\n");
-  Object.assign(document.createElement("a"),{href:URL.createObjectURL(new Blob([csv],{type:"text/csv"})),download:"nosh7_leads.csv"}).click();
+function exportCSV(){
+  const rows=filteredLeads();
+  const h=["Name","Phone","Email","Website","Address","Area","Status","Category","Follow Up","Last Contacted","Notes"];
+  const csv=[h.join(","),...rows.map(l=>[l.name,l.phone,l.email,l.website,l.address,l.area,l.status,l.category,l.follow_up_date,l.last_contacted,l.notes].map(v=>`"${(v||"").replace(/"/g,'""')}"`).join(","))].join("\n");
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download="nosh7_leads.csv"; a.click();
   toast("CSV exported!");
 }
 
-async function importCSV(e) {
-  const file = e.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async ev => {
-    try {
-      const lines = ev.target.result.split("\n").filter(Boolean);
-      const headers = lines[0].split(",").map(h=>h.replace(/"/g,"").trim().toLowerCase());
-      const newLeads = lines.slice(1).map(line => {
-        const vals = line.split(",").map(v=>v.replace(/^"|"$/g,"").trim());
-        const o = {}; headers.forEach((h,i) => o[h] = vals[i]||"");
-        return {id:Date.now()+""+Math.random(), name:o.name||"", phone:o.phone||"", email:o.email||"", status:o.status||"New", category:o.category||S.categories[0]||"", area:o.area||"", notes:o.notes||"", follow_up_date:o["follow up"]||"", last_contacted:o["last contacted"]||"", website:o.website||"", address:o.address||"", created_date:today()};
-      }).filter(l => l.name && l.phone);
-      if (!newLeads.length) { toast("No valid rows found","err"); return; }
-      await dbInsert("leads", newLeads);
-      S.leads = [...newLeads, ...S.leads];
-      setLeadsCount(); toast(`Imported ${newLeads.length} leads!`); render();
-    } catch(err) { toast("Import failed: "+err.message, "err"); }
-    e.target.value = "";
-  };
-  reader.readAsText(file);
+// ── IMPORT with preview ───────────────────────────────────────────────────────
+async function openImportPreview(e){
+  const file=e.target.files[0]; if(!file) return;
+  e.target.value="";
+  try{
+    const {headers,rows}=await parseFile(file);
+    const m=mapCol(headers);
+    const preview=rows.slice(0,5).filter(r=>r.some(v=>v));
+
+    // Check how many phones match existing leads
+    const existing=new Set(S.leads.map(l=>l.phone?.trim()));
+    const allLeads=rows.filter(r=>r.some(v=>v)).map(r=>rowToLead(r,m)).filter(l=>l.name&&l.phone);
+    const updates=allLeads.filter(l=>existing.has(l.phone.trim()));
+    const inserts=allLeads.filter(l=>!existing.has(l.phone.trim()));
+
+    modal(`
+      <div class="modal-header">
+        <h3 style="font-weight:700;font-size:15px;color:var(--text)">📂 Import Preview</h3>
+        ${mClose()}
+      </div>
+      <div class="modal-body">
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+          <div style="flex:1;min-width:100px;padding:12px 14px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;text-align:center">
+            <p style="font-size:22px;font-weight:700;color:#16a34a">${inserts.length}</p>
+            <p style="font-size:11px;color:#166534;margin-top:2px">New leads</p>
+          </div>
+          <div style="flex:1;min-width:100px;padding:12px 14px;background:#fefce8;border:1.5px solid #fde047;border-radius:10px;text-align:center">
+            <p style="font-size:22px;font-weight:700;color:#ca8a04">${updates.length}</p>
+            <p style="font-size:11px;color:#854d0e;margin-top:2px">Existing (by phone)</p>
+          </div>
+          <div style="flex:1;min-width:100px;padding:12px 14px;background:#f0f9ff;border:1.5px solid #7dd3fc;border-radius:10px;text-align:center">
+            <p style="font-size:22px;font-weight:700;color:#0369a1">${allLeads.length}</p>
+            <p style="font-size:11px;color:#075985;margin-top:2px">Total rows</p>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="label">For existing leads (matched by phone)</label>
+          <select class="input" id="imp-mode">
+            <option value="skip">Skip existing — only add new leads</option>
+            <option value="update">Update existing — overwrite with file data</option>
+            <option value="both">Both — add new + update existing</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="label">Detected columns from your file</label>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;padding:10px;background:var(--surface);border-radius:8px;border:1.5px solid var(--border)">
+            ${Object.entries(m).map(([field,idx])=>`<span style="padding:3px 8px;background:var(--accent-dim);color:var(--accent-d);border-radius:999px;font-size:10px;font-weight:600">${field} ← col${idx+1}:${headers[idx]}</span>`).join("")}
+            ${Object.keys(m).length===0?`<span style="color:var(--muted);font-size:12px">⚠️ Could not detect columns. Check your header row names.</span>`:""}
+          </div>
+        </div>
+
+        ${preview.length?`<div class="form-group">
+          <label class="label">Preview (first ${preview.length} rows)</label>
+          <div style="overflow-x:auto;border-radius:8px;border:1.5px solid var(--border)">
+          <table class="table" style="min-width:400px">
+            <thead><tr>${headers.slice(0,6).map(h=>`<th>${h}</th>`).join("")}${headers.length>6?`<th>+${headers.length-6} more</th>`:""}</tr></thead>
+            <tbody>${preview.map(r=>`<tr>${r.slice(0,6).map(v=>`<td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v||"—"}</td>`).join("")}${r.length>6?`<td style="font-size:10px;color:var(--muted)">...</td>`:""}</tr>`).join("")}</tbody>
+          </table></div></div>`:""}
+
+        ${!m.name||!m.phone?`<div style="padding:10px 12px;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:8px;margin-bottom:12px;font-size:12px;color:#991b1b">
+          ⚠️ <strong>Name</strong> or <strong>Phone</strong> column not detected. Make sure your header row has columns named Name and Phone.
+        </div>`:""}
+
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="doImport(${JSON.stringify(allLeads).replace(/'/g,"\\'")})" ${!m.name||!m.phone?"disabled":""}>
+            ✓ Import ${allLeads.length} Leads
+          </button>
+        </div>
+      </div>`, 600);
+
+    // Store import data globally to avoid passing huge JSON in onclick
+    window._importData = allLeads;
+  }catch(err){ toast("Parse error: "+err.message,"err"); }
+}
+
+async function doImport(data){
+  // Use stored data if available (avoids HTML encoding issues)
+  const allLeads = window._importData || data;
+  const mode=$("imp-mode")?.value||"skip";
+  const existing=new Map(S.leads.map(l=>[l.phone?.trim(),l]));
+
+  const toInsert=[], toUpdate=[];
+  allLeads.forEach(l=>{
+    const ph=l.phone?.trim();
+    if(existing.has(ph)){
+      if(mode==="update"||mode==="both") toUpdate.push({...existing.get(ph),...l,id:existing.get(ph).id,created_date:existing.get(ph).created_date});
+    } else {
+      if(mode==="skip"||mode==="both"||mode==="update") toInsert.push(l);
+    }
+  });
+  // If mode is "skip", toUpdate stays empty. If mode is "update", toInsert has non-existing only.
+
+  try{
+    if(toInsert.length) await api.post("leads",toInsert);
+    for(const l of toUpdate){
+      await api.patch("leads",l,`id=eq.${l.id}`);
+      S.leads=S.leads.map(x=>x.id===l.id?l:x);
+    }
+    if(toInsert.length){ S.leads=[...toInsert,...S.leads]; }
+    setCount(); toast(`✅ Imported ${toInsert.length} new, updated ${toUpdate.length}`); closeModal(); render();
+  }catch(err){ toast("Import failed: "+err.message,"err"); }
 }
 
 // ── LEAD FORM ─────────────────────────────────────────────────────────────────
-function openLeadForm(id) {
-  const l = id ? S.leads.find(x=>x.id===id) : null;
+function openLeadForm(id){
+  const l=id?S.leads.find(x=>x.id===id):null;
   modal(`
     <div class="modal-header">
-      <h3 style="font-weight:600;font-size:15px;color:#d4edd8">${l?"Edit Lead":"Add New Lead"}</h3>
-      ${modalClose()}
+      <h3 style="font-weight:700;font-size:15px;color:var(--text)">${l?"✏️ Edit Lead":"➕ Add New Lead"}</h3>
+      ${mClose()}
     </div>
     <div class="modal-body">
       <div class="grid2">
@@ -549,16 +684,13 @@ function openLeadForm(id) {
         <div class="form-group"><label class="label">Website</label><input class="input" id="lf-website" value="${l?.website||""}" placeholder="domain.com"></div>
         <div class="form-group" style="grid-column:1/-1"><label class="label">Address</label><input class="input" id="lf-address" value="${l?.address||""}" placeholder="Area, City"></div>
         <div class="form-group"><label class="label">Status</label>
-          <select class="input" id="lf-status">${STATUSES.map(s=>`<option ${l?.status===s?"selected":""}>${s}</option>`).join("")}</select>
-        </div>
+          <select class="input" id="lf-status">${STATUSES.map(s=>`<option ${(l?.status||"New")===s?"selected":""}>${s}</option>`).join("")}</select></div>
         <div class="form-group"><label class="label">Category</label>
-          <select class="input" id="lf-cat">${S.categories.map(c=>`<option ${l?.category===c?"selected":""}>${c}</option>`).join("")}</select>
-        </div>
+          <select class="input" id="lf-cat">${S.categories.map(c=>`<option ${l?.category===c?"selected":""}>${c}</option>`).join("")}</select></div>
         <div class="form-group"><label class="label">Area</label><input class="input" id="lf-area" value="${l?.area||""}" placeholder="Bopal, Satellite..."></div>
         <div class="form-group"><label class="label">Follow Up Date</label><input type="date" class="input" id="lf-fu" value="${l?.follow_up_date||""}"></div>
         <div class="form-group" style="grid-column:1/-1"><label class="label">Notes</label>
-          <textarea class="input" id="lf-notes" rows="3" style="resize:vertical" placeholder="Requirements, budget...">${l?.notes||""}</textarea>
-        </div>
+          <textarea class="input" id="lf-notes" rows="3" style="resize:vertical" placeholder="Requirements, budget...">${l?.notes||""}</textarea></div>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
@@ -567,172 +699,143 @@ function openLeadForm(id) {
     </div>`);
 }
 
-async function saveLeadForm(id) {
-  const g = i => $(i)?.value||"";
-  const data = {name:g("lf-name"),phone:g("lf-phone"),email:g("lf-email"),website:g("lf-website"),address:g("lf-address"),status:g("lf-status"),category:g("lf-cat"),area:g("lf-area"),follow_up_date:g("lf-fu"),notes:g("lf-notes")};
-  if (!data.name||!data.phone) { toast("Name and phone required","err"); return; }
-  try {
-    if (id) {
-      await dbUpdate("leads", data, {id});
-      S.leads = S.leads.map(l => l.id===id ? {...l,...data} : l);
-      toast("Lead updated!");
-    } else {
-      const newL = {...data, id:Date.now().toString(), created_date:today()};
-      await dbInsert("leads", newL);
-      S.leads = [newL, ...S.leads];
-      toast("Lead added!");
-    }
-    setLeadsCount(); closeModal(); render();
-  } catch(e) { toast("Error: "+e.message,"err"); }
+async function saveLeadForm(id){
+  const g=i=>$(i)?.value||"";
+  const data={name:g("lf-name"),phone:g("lf-phone"),email:g("lf-email"),website:g("lf-website"),address:g("lf-address"),status:g("lf-status"),category:g("lf-cat"),area:g("lf-area"),follow_up_date:g("lf-fu"),notes:g("lf-notes")};
+  if(!data.name||!data.phone){toast("Name and phone required","err");return;}
+  try{
+    if(id){ await api.patch("leads",data,`id=eq.${id}`); S.leads=S.leads.map(l=>l.id===id?{...l,...data}:l); toast("Lead updated!"); }
+    else{ const n={...data,id:Date.now().toString(),created_date:today()}; await api.post("leads",n); S.leads=[n,...S.leads]; toast("Lead added!"); }
+    setCount(); closeModal(); render();
+  }catch(e){ toast("Error: "+e.message,"err"); }
 }
 
-// ── WHATSAPP ──────────────────────────────────────────────────────────────────
-function openWpModal(id) {
-  const l = S.leads.find(x=>x.id===id); if (!l) return;
+// ── BULK UPDATE MODAL ─────────────────────────────────────────────────────────
+function openBulkModal(){
   modal(`
     <div class="modal-header">
-      <h3 style="font-weight:600;font-size:15px;color:#d4edd8">Send WhatsApp</h3>
-      ${modalClose()}
-    </div>
-    <div class="modal-body">
-      <div style="margin-bottom:14px;padding:12px;background:#122015;border-radius:9px;border:1px solid #1a3020;display:flex;align-items:center;gap:10px">
-        <div style="width:36px;height:36px;border-radius:50%;background:#25D36620;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px">💬</div>
-        <div>
-          <p style="font-weight:600;font-size:13px;color:#d4edd8">${l.name}</p>
-          <p style="font-size:11px;color:#6b9b6b;font-family:monospace">+91 ${l.phone}</p>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="label">Template (optional)</label>
-        <select class="input" onchange="applyTpl(this.value,'${id}')">
-          <option value="">— Pick a template —</option>
-          ${S.templates.map(t=>`<option value="${t.id}">${t.name}</option>`).join("")}
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="label">Message</label>
-        <textarea class="input" id="wp-msg" rows="5" style="resize:vertical" placeholder="Type your message..."></textarea>
-        <p style="font-size:10px;color:#6b9b6b;margin-top:3px" id="wp-cc">0 chars</p>
-      </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="sendWp('${id}')">📤 Open WhatsApp</button>
-      </div>
-    </div>`, 460);
-  $("wp-msg")?.addEventListener("input", function(){ const el=$("wp-cc"); if(el) el.textContent=this.value.length+" chars"; });
-}
-
-function applyTpl(tplId, leadId) {
-  if (!tplId) return;
-  const t = S.templates.find(x=>x.id===tplId);
-  const l = S.leads.find(x=>x.id===leadId);
-  if (t && l) {
-    const el = $("wp-msg");
-    if (el) { el.value = t.message.replace(/{name}/g, l.name); const cc=$("wp-cc"); if(cc) cc.textContent=el.value.length+" chars"; }
-  }
-}
-
-async function sendWp(id) {
-  const msg = $("wp-msg")?.value||"";
-  if (!msg.trim()) { toast("Enter a message","err"); return; }
-  const l = S.leads.find(x=>x.id===id); if (!l) return;
-  const ph = (l.phone||"").replace(/\D/g,"");
-  window.open(`https://wa.me/${ph.length===10?"91"+ph:ph}?text=${encodeURIComponent(msg)}`,"_blank");
-  const t = today();
-  try {
-    await dbUpdate("leads", {last_contacted:t}, {id});
-    S.leads = S.leads.map(l => l.id===id ? {...l, last_contacted:t} : l);
-  } catch(e) {}
-  closeModal(); toast("WhatsApp opened!"); render();
-}
-
-// ── BULK ──────────────────────────────────────────────────────────────────────
-function openBulkModal() {
-  modal(`
-    <div class="modal-header">
-      <h3 style="font-weight:600;font-size:15px;color:#d4edd8">Bulk Update ${S.sel.size} Leads</h3>
-      ${modalClose()}
+      <h3 style="font-weight:700;font-size:15px;color:var(--text)">📝 Bulk Update ${S.sel.size} Leads</h3>
+      ${mClose()}
     </div>
     <div class="modal-body" style="max-width:400px">
-      <div class="form-group"><label class="label">Field</label>
-        <select class="input" id="bk-field" onchange="refreshBulkOpts()">
+      <div class="form-group"><label class="label">Field to update</label>
+        <select class="input" id="bk-f" onchange="refreshBulkOpts()">
           <option value="status">Status</option>
           <option value="category">Category</option>
-        </select>
-      </div>
-      <div class="form-group"><label class="label">New Value</label>
-        <select class="input" id="bk-val">
-          <option value="">— Select —</option>
-          ${STATUSES.map(s=>`<option>${s}</option>`).join("")}
-        </select>
+          <option value="area">Area</option>
+        </select></div>
+      <div class="form-group" id="bk-val-wrap"><label class="label">New Value</label>
+        <select class="input" id="bk-v"><option value="">— Select —</option>${STATUSES.map(s=>`<option>${s}</option>`).join("")}</select>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
         <button class="btn btn-primary" onclick="doBulk()">Update ${S.sel.size} Leads</button>
       </div>
-    </div>`, 400);
+    </div>`,400);
 }
 
-function refreshBulkOpts() {
-  const f = $("bk-field")?.value; const s = $("bk-val"); if (!s) return;
-  s.innerHTML = '<option value="">— Select —</option>' + (f==="status"?STATUSES:S.categories).map(v=>`<option>${v}</option>`).join("");
+function refreshBulkOpts(){
+  const f=$("bk-f")?.value, w=$("bk-val-wrap"); if(!w) return;
+  if(f==="area"){
+    w.innerHTML=`<label class="label">New Area</label><input class="input" id="bk-v" placeholder="e.g. Bopal">`;
+  } else {
+    const opts=f==="status"?STATUSES:S.categories;
+    w.innerHTML=`<label class="label">New Value</label><select class="input" id="bk-v"><option value="">— Select —</option>${opts.map(v=>`<option>${v}</option>`).join("")}</select>`;
+  }
 }
 
-async function doBulk() {
-  const field = $("bk-field")?.value;
-  const val = $("bk-val")?.value;
-  if (!val) { toast("Select a value","err"); return; }
-  const ids = [...S.sel];
-  try {
-    await dbDelete("leads_bulk_placeholder", ids); // placeholder—we use loop for PATCH
-    // Supabase REST supports `id=in.(...)` for PATCH too
-    const params = `id=in.(${ids.join(",")})`;
-    const r = await fetch(`${URL_BASE}/leads?${params}`, {
-      method:"PATCH", headers:HDR, body:JSON.stringify({[field]:val})
-    });
-    if (!r.ok) throw new Error(await r.text());
-    S.leads = S.leads.map(l => S.sel.has(l.id) ? {...l,[field]:val} : l);
+async function doBulk(){
+  const field=$("bk-f")?.value, val=$("bk-v")?.value;
+  if(!val){toast("Enter a value","err");return;}
+  const ids=[...S.sel];
+  try{
+    await api.patch("leads",{[field]:val},`id=in.(${ids.join(",")})`);
+    S.leads=S.leads.map(l=>S.sel.has(l.id)?{...l,[field]:val}:l);
     toast(`${ids.length} leads updated`); S.sel.clear(); closeModal(); render();
-  } catch(e) { toast("Error: "+e.message,"err"); }
+  }catch(e){ toast("Error: "+e.message,"err"); }
+}
+
+// ── WHATSAPP ──────────────────────────────────────────────────────────────────
+function openWpModal(id){
+  const l=S.leads.find(x=>x.id===id); if(!l) return;
+  modal(`
+    <div class="modal-header">
+      <h3 style="font-weight:700;font-size:15px;color:var(--text)">💬 Send WhatsApp</h3>
+      ${mClose()}
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:14px;padding:12px;background:var(--surface);border-radius:10px;border:1.5px solid var(--border);display:flex;align-items:center;gap:10px">
+        <div style="width:38px;height:38px;border-radius:50%;background:#25D36620;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px">💬</div>
+        <div><p style="font-weight:600;font-size:13px;color:var(--text)">${l.name}</p><p style="font-size:11px;color:var(--muted);font-family:monospace">+91 ${l.phone}</p></div>
+      </div>
+      <div class="form-group"><label class="label">Template (optional)</label>
+        <select class="input" onchange="applyTpl(this.value,'${id}')">
+          <option value="">— Pick a template —</option>
+          ${S.templates.map(t=>`<option value="${t.id}">${t.name}</option>`).join("")}
+        </select></div>
+      <div class="form-group">
+        <label class="label">Message</label>
+        <textarea class="input" id="wp-msg" rows="5" style="resize:vertical" placeholder="Type your message..."></textarea>
+        <p style="font-size:10px;color:var(--muted);margin-top:3px" id="wp-cc">0 chars</p>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-wa" onclick="sendWp('${id}')">📤 Open WhatsApp</button>
+      </div>
+    </div>`,460);
+  $("wp-msg")?.addEventListener("input",function(){const e=$("wp-cc");if(e)e.textContent=this.value.length+" chars";});
+}
+
+function applyTpl(tid,lid){
+  if(!tid) return;
+  const t=S.templates.find(x=>x.id===tid), l=S.leads.find(x=>x.id===lid);
+  if(t&&l){const e=$("wp-msg");if(e){e.value=t.message.replace(/{name}/g,l.name);const c=$("wp-cc");if(c)c.textContent=e.value.length+" chars";}}
+}
+
+async function sendWp(id){
+  const msg=$("wp-msg")?.value||""; if(!msg.trim()){toast("Enter a message","err");return;}
+  const l=S.leads.find(x=>x.id===id); if(!l) return;
+  const ph=(l.phone||"").replace(/\D/g,"");
+  window.open(`https://wa.me/${ph.length===10?"91"+ph:ph}?text=${encodeURIComponent(msg)}`,"_blank");
+  const t=today();
+  try{ await api.patch("leads",{last_contacted:t},`id=eq.${id}`); S.leads=S.leads.map(l=>l.id===id?{...l,last_contacted:t}:l); }catch(e){}
+  closeModal(); toast("WhatsApp opened!"); render();
 }
 
 // ── TEMPLATES ─────────────────────────────────────────────────────────────────
-function renderTpls() {
-  return `<div class="fade">
+function renderTpls(){
+  return `<div class="fade" style="padding-top:8px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
-      <div><h1 style="font-size:22px;font-weight:700;color:#d4edd8">Templates</h1><p style="color:#6b9b6b;font-size:12px">Saved WhatsApp messages</p></div>
-      <button class="btn btn-primary btn-sm" onclick="openTplForm()">+ New Template</button>
+      <div><h1 style="font-size:22px;font-weight:700;color:var(--text)">Templates</h1><p style="color:var(--muted);font-size:12px">Saved WhatsApp messages with {name} personalization</p></div>
+      <button class="btn btn-primary btn-sm" onclick="openTplForm()">＋ New Template</button>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px">
       ${S.templates.map(t=>`<div class="card" style="padding:16px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-          <div>
-            <p style="font-weight:600;font-size:13px;color:#d4edd8">${t.name}</p>
-            <span style="font-size:10px;color:#6b9b6b">${t.message.length} chars</span>
-          </div>
+          <div><p style="font-weight:600;font-size:13px;color:var(--text)">${t.name}</p><span style="font-size:10px;color:var(--muted)">${t.message.length} chars</span></div>
           <div style="display:flex;gap:4px">
-            <button class="action-btn" onclick="openTplForm('${t.id}')" title="Edit">✏️</button>
-            <button class="action-btn" onclick="deleteTpl('${t.id}')" title="Delete">🗑</button>
+            <button class="ab" title="Edit" onclick="openTplForm('${t.id}')">✏️</button>
+            <button class="ab" title="Delete" onclick="deleteTpl('${t.id}')">🗑</button>
           </div>
         </div>
-        <p style="font-size:12px;color:#6b9b6b;line-height:1.65;background:#122015;padding:10px 12px;border-radius:8px;border:1px solid #1a3020">${t.message}</p>
+        <p style="font-size:12px;color:var(--muted);line-height:1.65;background:var(--surface);padding:10px 12px;border-radius:8px;border:1.5px solid var(--border)">${t.message}</p>
       </div>`).join("")}
     </div>
   </div>`;
 }
 
-function openTplForm(id) {
-  const t = id ? S.templates.find(x=>x.id===id) : null;
+function openTplForm(id){
+  const t=id?S.templates.find(x=>x.id===id):null;
   modal(`
     <div class="modal-header">
-      <h3 style="font-weight:600;font-size:15px;color:#d4edd8">${t?"Edit Template":"New Template"}</h3>
-      ${modalClose()}
+      <h3 style="font-weight:700;font-size:15px;color:var(--text)">${t?"✏️ Edit Template":"➕ New Template"}</h3>
+      ${mClose()}
     </div>
     <div class="modal-body">
-      <div class="form-group"><label class="label">Name</label><input class="input" id="tf-name" value="${t?.name||""}" placeholder="e.g. Initial Greeting"></div>
+      <div class="form-group"><label class="label">Template Name</label><input class="input" id="tf-n" value="${t?.name||""}" placeholder="e.g. Initial Greeting"></div>
       <div class="form-group">
-        <label class="label">Message <span style="color:#25D366">· Use {name} to personalize</span></label>
-        <textarea class="input" id="tf-msg" rows="5" style="resize:vertical" placeholder="Hello {name}! ...">${t?.message||""}</textarea>
+        <label class="label">Message · <span style="color:var(--accent)">Use {name} to personalize</span></label>
+        <textarea class="input" id="tf-m" rows="5" style="resize:vertical" placeholder="Hello {name}! ...">${t?.message||""}</textarea>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
@@ -741,109 +844,114 @@ function openTplForm(id) {
     </div>`);
 }
 
-async function saveTpl(id) {
-  const name = $("tf-name")?.value||""; const message = $("tf-msg")?.value||"";
-  if (!name||!message) { toast("Fill all fields","err"); return; }
-  try {
-    if (id) {
-      await dbUpdate("templates", {name,message}, {id});
-      S.templates = S.templates.map(t => t.id===id ? {...t,name,message} : t);
-      toast("Template updated!");
-    } else {
-      const newT = {id:"t"+Date.now(), name, message};
-      await dbInsert("templates", newT);
-      S.templates = [...S.templates, newT];
-      toast("Template added!");
-    }
+async function saveTpl(id){
+  const name=$("tf-n")?.value||"", message=$("tf-m")?.value||"";
+  if(!name||!message){toast("Fill all fields","err");return;}
+  try{
+    if(id){ await api.patch("templates",{name,message},`id=eq.${id}`); S.templates=S.templates.map(t=>t.id===id?{...t,name,message}:t); toast("Updated!"); }
+    else{ const n={id:"t"+Date.now(),name,message}; await api.post("templates",n); S.templates=[...S.templates,n]; toast("Template added!"); }
     closeModal(); render();
-  } catch(e) { toast("Error: "+e.message,"err"); }
+  }catch(e){ toast("Error: "+e.message,"err"); }
 }
 
-async function deleteTpl(id) {
-  if (!confirm("Delete this template?")) return;
-  try {
-    await dbDelete("templates", {id});
-    S.templates = S.templates.filter(t => t.id!==id);
-    toast("Deleted"); render();
-  } catch(e) { toast("Error","err"); }
+async function deleteTpl(id){
+  if(!confirm("Delete this template?")) return;
+  try{ await api.del("templates",`id=eq.${id}`); S.templates=S.templates.filter(t=>t.id!==id); toast("Deleted"); render(); }
+  catch(e){ toast("Error","err"); }
 }
 
-// ── CATEGORIES ────────────────────────────────────────────────────────────────
-function renderCats() {
-  return `<div class="fade">
+// ── CATEGORIES ─────────────────────────────────────────────────────────────────
+function renderCats(){
+  return `<div class="fade" style="padding-top:8px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
-      <div><h1 style="font-size:22px;font-weight:700;color:#d4edd8">Categories</h1><p style="color:#6b9b6b;font-size:12px">Organize leads by type</p></div>
-      <button class="btn btn-primary btn-sm" onclick="openCatForm()">+ Add Category</button>
+      <div><h1 style="font-size:22px;font-weight:700;color:var(--text)">Categories</h1><p style="color:var(--muted);font-size:12px">Organize and rename lead categories</p></div>
+      <button class="btn btn-primary btn-sm" onclick="openCatForm()">＋ Add Category</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:11px">
-      ${S.categories.map(cat => {
-        const n = S.leads.filter(l=>l.category===cat).length;
-        return `<div class="card" style="padding:16px 18px;display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <p style="font-weight:600;font-size:14px;color:#d4edd8">${cat}</p>
-            <p style="font-size:11px;color:#6b9b6b;margin-top:3px">${n} lead${n!==1?"s":""}</p>
+      ${S.categories.map(cat=>{
+        const n=S.leads.filter(l=>l.category===cat).length;
+        return `<div class="card" style="padding:16px 18px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+            <p style="font-weight:700;font-size:15px;color:var(--text)">${cat}</p>
+            <div style="display:flex;gap:3px">
+              <button class="ab" title="Rename" onclick="openRenameCat('${cat}')">✏️</button>
+              <button class="ab" title="Delete" onclick="deleteCat('${cat}')">🗑</button>
+            </div>
           </div>
-          <div style="display:flex;align-items:center;gap:10px">
-            <span style="font-size:24px;font-weight:700;color:#25D366">${n}</span>
-            <button class="action-btn" onclick="deleteCat('${cat}')" title="Delete">🗑</button>
-          </div>
+          <p style="font-size:11px;color:var(--muted)">${n} lead${n!==1?"s":""}</p>
+          <p style="font-size:26px;font-weight:700;color:var(--accent);margin-top:6px;line-height:1">${n}</p>
         </div>`;}).join("")}
     </div>
   </div>`;
 }
 
-function openCatForm() {
+function openCatForm(){
   modal(`
     <div class="modal-header">
-      <h3 style="font-weight:600;font-size:15px;color:#d4edd8">Add Category</h3>
-      ${modalClose()}
+      <h3 style="font-weight:700;font-size:15px;color:var(--text)">➕ Add Category</h3>
+      ${mClose()}
     </div>
     <div class="modal-body" style="max-width:400px">
-      <div class="form-group"><label class="label">Category Name</label><input class="input" id="cat-name" placeholder="e.g. Luxury Residential"></div>
+      <div class="form-group"><label class="label">Category Name</label><input class="input" id="cat-n" placeholder="e.g. Luxury Residential"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
         <button class="btn btn-primary" onclick="saveCat()">Add</button>
       </div>
-    </div>`, 400);
+    </div>`,400);
 }
 
-async function saveCat() {
-  const name = ($("cat-name")?.value||"").trim();
-  if (!name) { toast("Enter a name","err"); return; }
-  if (S.categories.includes(name)) { toast("Already exists","err"); return; }
-  try {
-    await dbInsert("categories", {name});
-    S.categories = [...S.categories, name];
-    toast("Category added!"); closeModal(); render();
-  } catch(e) { toast("Error: "+e.message,"err"); }
+async function saveCat(){
+  const name=($("cat-n")?.value||"").trim();
+  if(!name){toast("Enter a name","err");return;}
+  if(S.categories.includes(name)){toast("Already exists","err");return;}
+  try{ await api.post("categories",{name}); S.categories=[...S.categories,name]; toast("Category added!"); closeModal(); render(); }
+  catch(e){ toast("Error: "+e.message,"err"); }
 }
 
-async function deleteCat(cat) {
-  const n = S.leads.filter(l=>l.category===cat).length;
-  if (n > 0) { toast(`Can't delete: ${n} leads use this`,"err"); return; }
-  if (!confirm(`Delete "${cat}"?`)) return;
-  try {
-    await dbDelete("categories", {name:cat});
-    S.categories = S.categories.filter(c=>c!==cat);
-    toast("Deleted"); render();
-  } catch(e) { toast("Error","err"); }
+function openRenameCat(oldName){
+  modal(`
+    <div class="modal-header">
+      <h3 style="font-weight:700;font-size:15px;color:var(--text)">✏️ Rename Category</h3>
+      ${mClose()}
+    </div>
+    <div class="modal-body" style="max-width:400px">
+      <div class="form-group">
+        <label class="label">Current name</label>
+        <input class="input" value="${oldName}" disabled style="opacity:.6">
+      </div>
+      <div class="form-group">
+        <label class="label">New name</label>
+        <input class="input" id="rename-n" value="${oldName}" placeholder="New category name">
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:14px">⚠️ All leads using <strong>${oldName}</strong> will be updated to the new name.</p>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="renameCat('${oldName}')">✓ Rename</button>
+      </div>
+    </div>`,400);
 }
 
-// Fix bulk update — replace placeholder function
-async function doBulk() {
-  const field = $("bk-field")?.value;
-  const val = $("bk-val")?.value;
-  if (!val) { toast("Select a value","err"); return; }
-  const ids = [...S.sel];
-  try {
-    const params = `id=in.(${ids.join(",")})`;
-    const r = await fetch(`${URL_BASE}/leads?${params}`, {
-      method:"PATCH", headers:HDR, body:JSON.stringify({[field]:val})
-    });
-    if (!r.ok) throw new Error(await r.text());
-    S.leads = S.leads.map(l => S.sel.has(l.id) ? {...l,[field]:val} : l);
-    toast(`${ids.length} leads updated`); S.sel.clear(); closeModal(); render();
-  } catch(e) { toast("Error: "+e.message,"err"); }
+async function renameCat(oldName){
+  const newName=($("rename-n")?.value||"").trim();
+  if(!newName||newName===oldName){toast("Enter a different name","err");return;}
+  if(S.categories.includes(newName)){toast("Name already exists","err");return;}
+  try{
+    // Insert new, update leads, delete old
+    await api.post("categories",{name:newName});
+    await api.patch("leads",{category:newName},`category=eq.${encodeURIComponent(oldName)}`);
+    await api.del("categories",`name=eq.${encodeURIComponent(oldName)}`);
+    S.categories=S.categories.map(c=>c===oldName?newName:c);
+    S.leads=S.leads.map(l=>l.category===oldName?{...l,category:newName}:l);
+    toast(`Renamed to "${newName}"`); closeModal(); render();
+  }catch(e){ toast("Error: "+e.message,"err"); }
+}
+
+async function deleteCat(cat){
+  const n=S.leads.filter(l=>l.category===cat).length;
+  if(n>0){toast(`Can't delete: ${n} leads use this category`,"err");return;}
+  if(!confirm(`Delete "${cat}"?`)) return;
+  try{ await api.del("categories",`name=eq.${encodeURIComponent(cat)}`); S.categories=S.categories.filter(c=>c!==cat); toast("Deleted"); render(); }
+  catch(e){ toast("Error","err"); }
 }
 
 // ── START ─────────────────────────────────────────────────────────────────────
