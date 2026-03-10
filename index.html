@@ -8,953 +8,877 @@
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
 :root{
-  --bg:#f0f9ff;--card:#ffffff;--surface:#f8fafc;--border:#e2e8f0;
+  --bg:#f0f9ff;--card:#fff;--surface:#f8fafc;--border:#e2e8f0;
   --accent:#22c55e;--accent-d:#16a34a;--accent-dim:#dcfce7;
   --wa:#25D366;--wa-d:#128C7E;
   --text:#0f172a;--muted:#64748b;--dim:#94a3b8;
   --red:#ef4444;--yellow:#f59e0b;--blue:#3b82f6;--purple:#8b5cf6;
-  --sb-bg:#0f172a;--sb-w:220px;
+  --sb-w:220px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:var(--bg)}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:var(--accent)}
 input,select,textarea,button{font-family:'Sora',sans-serif}
 
-/* ── Sidebar ── */
-#sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--sb-w);background:var(--sb-bg);display:flex;flex-direction:column;z-index:200;transition:transform .25s ease;box-shadow:4px 0 20px rgba(0,0,0,.15)}
+/* sidebar */
+#sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--sb-w);background:#0f172a;display:flex;flex-direction:column;z-index:200;transition:transform .25s ease;box-shadow:4px 0 20px rgba(0,0,0,.15)}
 #sidebar.hidden{transform:translateX(calc(-1 * var(--sb-w)))}
-#sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199}
-#main{margin-left:var(--sb-w);transition:margin-left .25s ease;min-height:100vh;padding:22px 24px}
+#sb-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:199}
+#sb-ov.show{display:block}
+#main{margin-left:var(--sb-w);transition:margin-left .25s ease;min-height:100vh;padding:20px 24px}
 #main.full{margin-left:0}
-#toggle-btn{position:fixed;top:14px;left:14px;z-index:300;width:36px;height:36px;border-radius:9px;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(34,197,94,.4);transition:all .2s}
-#toggle-btn:hover{background:var(--accent-d)}
-#toggle-btn.shifted{left:calc(var(--sb-w) + 10px)}
+#tbtn{position:fixed;top:12px;left:12px;z-index:300;width:36px;height:36px;border-radius:9px;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(34,197,94,.4);transition:all .2s}
+#tbtn:hover{background:var(--accent-d)}
+#tbtn.sh{left:calc(var(--sb-w) + 10px)}
 
-/* ── Buttons ── */
-.btn{display:inline-flex;align-items:center;gap:5px;cursor:pointer;border:none;border-radius:8px;font-family:'Sora',sans-serif;font-weight:500;transition:all .15s;font-size:13px;padding:8px 14px;white-space:nowrap}
-.btn-sm{font-size:11px;padding:5px 10px}
-.btn-primary{background:var(--accent);color:#fff;box-shadow:0 1px 6px rgba(34,197,94,.3)}.btn-primary:hover{background:var(--accent-d)}
-.btn-secondary{background:var(--card);color:var(--text);border:1.5px solid var(--border)}.btn-secondary:hover{background:var(--surface);border-color:var(--accent)}
-.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:#dc2626}
-.btn-ghost{background:transparent;color:var(--muted);border:1.5px solid transparent}.btn-ghost:hover{background:var(--surface);border-color:var(--border)}
-.btn-wa{background:var(--wa);color:#fff}.btn-wa:hover{background:var(--wa-d)}
-.btn:disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
-
-/* ── Sidebar nav ── */
+/* nav */
 .nav-btn{width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;margin-bottom:3px;border:1px solid transparent;cursor:pointer;font-size:12px;font-weight:400;transition:all .15s;text-align:left;background:transparent;color:#94a3b8}
 .nav-btn:hover{background:#1e293b;color:#e2e8f0}
 .nav-btn.active{background:#16a34a22;border-color:#22c55e40;color:#4ade80;font-weight:600}
-.nav-badge{font-size:10px;padding:1px 6px;border-radius:999px;background:#22c55e20;color:#4ade80;margin-left:auto}
+.nbadge{font-size:10px;padding:1px 6px;border-radius:999px;background:#22c55e20;color:#4ade80;margin-left:auto}
 
-/* ── Inputs ── */
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:5px;cursor:pointer;border:none;border-radius:8px;font-weight:500;transition:all .15s;font-size:13px;padding:8px 14px;white-space:nowrap}
+.btn-sm{font-size:11px;padding:5px 10px}
+.btn-xs{font-size:11px;padding:3px 8px}
+.btn-p{background:var(--accent);color:#fff;box-shadow:0 1px 6px rgba(34,197,94,.3)}.btn-p:hover{background:var(--accent-d)}
+.btn-s{background:var(--card);color:var(--text);border:1.5px solid var(--border)}.btn-s:hover{background:var(--surface);border-color:var(--accent)}
+.btn-d{background:var(--red);color:#fff}.btn-d:hover{background:#dc2626}
+.btn-g{background:transparent;color:var(--muted);border:1.5px solid transparent}.btn-g:hover{background:var(--surface);border-color:var(--border)}
+.btn-wa{background:var(--wa);color:#fff;font-size:11px;padding:4px 9px;border-radius:6px}.btn-wa:hover{background:var(--wa-d)}
+.btn-call{background:#3b82f6;color:#fff;font-size:11px;padding:4px 9px;border-radius:6px}.btn-call:hover{background:#2563eb}
+.btn:disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
+
+/* inputs */
 .input{width:100%;padding:8px 12px;border-radius:8px;font-size:13px;background:var(--card);color:var(--text);border:1.5px solid var(--border);outline:none;transition:border-color .15s}
 .input:focus{border-color:var(--accent)}
 .label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:500}
-.form-group{margin-bottom:13px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.fg{margin-bottom:13px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
 
-/* ── Cards ── */
+/* card / table */
 .card{background:var(--card);border:1.5px solid var(--border);border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
-
-/* ── Table ── */
 .table{width:100%;border-collapse:collapse}
 .table th{text-align:left;padding:9px 12px;font-size:10px;color:var(--muted);font-weight:600;user-select:none;white-space:nowrap;background:var(--surface);text-transform:uppercase;letter-spacing:.05em}
-.table th.sortable{cursor:pointer}
-.table th.sortable:hover{color:var(--accent)}
+.table th.s{cursor:pointer}.table th.s:hover{color:var(--accent)}
 .table td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text)}
 .table tr:last-child td{border-bottom:none}
 .table tbody tr:hover td{background:#f0fdf4}
 
-/* ── Modal ── */
-.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(8px)}
+/* modal */
+.ov{position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(8px)}
 .modal{background:var(--card);border:1.5px solid var(--border);border-radius:18px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.15)}
-.modal-header{padding:16px 22px;border-bottom:1.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--card);z-index:1}
-.modal-body{padding:22px}
+.mh{padding:16px 22px;border-bottom:1.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--card);z-index:1}
+.mb{padding:22px}
 
-/* ── Badges ── */
-.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:500}
-
-/* ── Action buttons ── */
+/* badges */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:500}
 .ab{padding:5px;border-radius:6px;background:transparent;border:none;cursor:pointer;display:inline-flex;transition:background .1s;color:var(--muted)}
 .ab:hover{background:var(--surface)}
 
-/* ── Stat card ── */
-.stat{flex:1;min-width:100px;padding:16px 18px;border-radius:14px;background:var(--card);border:1.5px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.04);transition:all .2s}
-.stat.click{cursor:pointer}.stat.click:hover{border-color:var(--accent);box-shadow:0 4px 12px rgba(34,197,94,.15)}
+/* stat card */
+.stat{flex:1;min-width:90px;padding:14px 16px;border-radius:12px;background:var(--card);border:1.5px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.04);transition:all .2s}
+.stat.cl{cursor:pointer}.stat.cl:hover{border-color:var(--accent);box-shadow:0 4px 12px rgba(34,197,94,.15)}
 
-/* ── Animations ── */
+/* mobile lead cards */
+.lead-card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.lead-card-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.lead-field{display:flex;align-items:center;gap:6px;margin-bottom:5px;font-size:12px;color:var(--muted)}
+.lead-field strong{color:var(--text);font-weight:500}
+
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 @keyframes toastIn{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
-@keyframes slideIn{from{transform:translateX(-10px);opacity:0}to{transform:translateX(0);opacity:1}}
 .spin{animation:spin .7s linear infinite}
 .fade{animation:fadeIn .2s ease}
 
-/* ── Mobile ── */
+/* desktop: show full table */
+.mobile-only{display:none}
+.desktop-only{display:block}
+
 @media(max-width:768px){
-  #sidebar{width:100% !important;max-width:280px}
-  #sidebar.hidden{transform:translateX(-100%)}
-  #sb-overlay{display:block}
-  #sb-overlay.hidden{display:none}
-  #main{margin-left:0 !important;padding:14px}
-  #toggle-btn{left:14px !important}
-  #toggle-btn.shifted{left:14px !important}
-  .grid2{grid-template-columns:1fr}
-  .hide-mobile{display:none !important}
-  .table th:nth-child(n+6),.table td:nth-child(n+6){display:none}
+  #sidebar{width:280px !important}
+  #sidebar.hidden{transform:translateX(-280px)}
+  #sb-ov{display:block;pointer-events:none;opacity:0;transition:opacity .25s}
+  #sb-ov.show{pointer-events:all;opacity:1}
+  #main{margin-left:0 !important;padding:12px 10px}
+  #tbtn{left:12px !important}
+  #tbtn.sh{left:12px !important}
+  .g2{grid-template-columns:1fr}
+  h1.page-title{font-size:17px !important;margin-top:0}
+  .btn{font-size:12px;padding:6px 10px}
+  .btn-sm{font-size:11px;padding:4px 8px}
+  .top-bar{flex-wrap:wrap;gap:6px}
+  .top-bar .actions{flex-wrap:wrap;gap:5px}
   .stat{min-width:calc(50% - 6px);flex:none}
-  h1{font-size:18px !important}
-  .btn{font-size:12px;padding:7px 11px}
-  .top-bar{flex-wrap:wrap;gap:8px}
-  .top-bar .btn-group{width:100%;justify-content:flex-end}
-}
-@media(max-width:480px){
-  #main{padding:10px}
-  .table th:nth-child(n+5),.table td:nth-child(n+5){display:none}
-  .stat{min-width:calc(50% - 5px)}
+  .mobile-only{display:block}
+  .desktop-only{display:none}
+  .filter-row{flex-direction:column;gap:6px}
+  .filter-row>*{width:100%}
 }
 </style>
 </head>
 <body>
 
-<!-- Toggle Button -->
-<button id="toggle-btn" class="shifted" onclick="toggleSidebar()" title="Toggle sidebar">
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="toggle-icon">
-    <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-  </svg>
+<button id="tbtn" class="sh" onclick="toggleSB()" title="Menu">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 </button>
+<div id="sb-ov" onclick="toggleSB(false)"></div>
 
-<!-- Sidebar Overlay (mobile) -->
-<div id="sb-overlay" class="hidden" onclick="toggleSidebar()"></div>
-
-<!-- Sidebar -->
 <div id="sidebar">
-  <div style="padding:56px 16px 16px;border-bottom:1px solid #1e293b">
+  <div style="padding:52px 16px 14px;border-bottom:1px solid #1e293b">
     <div style="display:flex;align-items:center;gap:10px">
-      <div style="width:36px;height:36px;border-radius:11px;background:#25D36625;display:flex;align-items:center;justify-content:center;border:1px solid #25D36650;flex-shrink:0">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+      <div style="width:34px;height:34px;border-radius:10px;background:#25D36622;display:flex;align-items:center;justify-content:center;border:1px solid #25D36645;flex-shrink:0">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
       </div>
-      <div>
-        <p style="font-weight:700;font-size:13px;color:#f1f5f9;line-height:1.2">NOSH7 CRM</p>
-        <p style="font-size:10px;color:#64748b">WhatsApp Leads</p>
-      </div>
+      <div><p style="font-weight:700;font-size:13px;color:#f1f5f9;line-height:1.2">NOSH7 CRM</p><p style="font-size:10px;color:#64748b">WhatsApp Leads</p></div>
     </div>
   </div>
   <nav style="padding:10px 8px;flex:1;overflow-y:auto">
-    <button class="nav-btn active" onclick="navigate('dashboard')" id="nav-dashboard">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <button class="nav-btn" onclick="go('dashboard')" id="nav-dashboard">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       Dashboard
     </button>
-    <button class="nav-btn" onclick="navigate('leads')" id="nav-leads">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      Leads <span class="nav-badge" id="leads-count">0</span>
+    <button class="nav-btn active" onclick="go('leads')" id="nav-leads">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Leads <span class="nbadge" id="lcount">0</span>
     </button>
-    <button class="nav-btn" onclick="navigate('templates')" id="nav-templates">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <button class="nav-btn" onclick="go('templates')" id="nav-templates">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       Templates
     </button>
-    <button class="nav-btn" onclick="navigate('categories')" id="nav-categories">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    <button class="nav-btn" onclick="go('categories')" id="nav-categories">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
       Categories
     </button>
   </nav>
-  <div style="padding:12px 16px;border-top:1px solid #1e293b;display:flex;align-items:center;gap:6px">
-    <div id="db-dot" style="width:7px;height:7px;border-radius:50%;background:#f59e0b;flex-shrink:0"></div>
-    <p id="db-status" style="font-size:10px;color:#475569">Connecting...</p>
+  <div style="padding:10px 16px;border-top:1px solid #1e293b;display:flex;align-items:center;gap:6px">
+    <div id="dbdot" style="width:7px;height:7px;border-radius:50%;background:#f59e0b;flex-shrink:0"></div>
+    <p id="dbst" style="font-size:10px;color:#475569">Connecting...</p>
   </div>
 </div>
 
-<!-- Main Content -->
 <main id="main">
-  <div style="display:flex;justify-content:center;align-items:center;height:60vh;flex-direction:column;gap:12px">
-    <div style="width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%" class="spin"></div>
+  <div style="display:flex;justify-content:center;align-items:center;height:55vh;flex-direction:column;gap:12px">
+    <div style="width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%" class="spin"></div>
     <p style="color:var(--muted);font-size:13px">Loading your CRM...</p>
   </div>
 </main>
-
-<!-- Modal & Toast -->
 <div id="modal-wrap"></div>
-<div id="toast" style="display:none;position:fixed;bottom:22px;right:22px;z-index:9999;padding:11px 16px;border-radius:11px;font-size:12px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.15);animation:toastIn .2s ease;max-width:340px;align-items:center;gap:8px"></div>
+<div id="toast" style="display:none"></div>
 
 <script>
-// ── API ───────────────────────────────────────────────────────────────────────
-const BASE = "https://doesbktbrslcrdhmemhn.supabase.co/rest/v1";
-const KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZXNia3RicnNsY3JkaG1lbWhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDY3NTEsImV4cCI6MjA4ODU4Mjc1MX0.cl93JTGAIJI36H68X5WOpZUV8TWea8ItotFwOTQU8NI";
-const H = {"Content-Type":"application/json","apikey":KEY,"Authorization":"Bearer "+KEY,"Prefer":"return=representation"};
-
-const api = {
-  get: async (t,q="") => { const r=await fetch(`${BASE}/${t}?${q}`,{headers:H}); if(!r.ok)throw new Error(await r.text()); return r.json(); },
-  post: async (t,d) => { const r=await fetch(`${BASE}/${t}`,{method:"POST",headers:H,body:JSON.stringify(Array.isArray(d)?d:[d])}); if(!r.ok)throw new Error(await r.text()); return r.json(); },
-  patch: async (t,d,q) => { const r=await fetch(`${BASE}/${t}?${q}`,{method:"PATCH",headers:H,body:JSON.stringify(d)}); if(!r.ok)throw new Error(await r.text()); return r.json(); },
-  del: async (t,q) => { const r=await fetch(`${BASE}/${t}?${q}`,{method:"DELETE",headers:H}); if(!r.ok)throw new Error(await r.text()); },
+// ── API ──────────────────────────────────────────────────────────────────────
+const BASE="https://doesbktbrslcrdhmemhn.supabase.co/rest/v1";
+const KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvZXNia3RicnNsY3JkaG1lbWhuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDY3NTEsImV4cCI6MjA4ODU4Mjc1MX0.cl93JTGAIJI36H68X5WOpZUV8TWea8ItotFwOTQU8NI";
+const H={"Content-Type":"application/json","apikey":KEY,"Authorization":"Bearer "+KEY,"Prefer":"return=representation"};
+const api={
+  get:async(t,q="")=>{const r=await fetch(`${BASE}/${t}?${q}`,{headers:H});if(!r.ok)throw new Error(await r.text());return r.json()},
+  post:async(t,d)=>{const r=await fetch(`${BASE}/${t}`,{method:"POST",headers:H,body:JSON.stringify(Array.isArray(d)?d:[d])});if(!r.ok)throw new Error(await r.text());return r.json()},
+  patch:async(t,d,q)=>{const r=await fetch(`${BASE}/${t}?${q}`,{method:"PATCH",headers:H,body:JSON.stringify(d)});if(!r.ok)throw new Error(await r.text());return r.json()},
+  del:async(t,q)=>{const r=await fetch(`${BASE}/${t}?${q}`,{method:"DELETE",headers:H});if(!r.ok)throw new Error(await r.text())}
 };
 
-// ── STATE ─────────────────────────────────────────────────────────────────────
-const S = {
-  leads:[], templates:[], categories:[], tab:"dashboard",
-  f:{search:"",status:"all",category:"all",sort:"created_date",dir:"desc",page:1},
-  sel:new Set(), sidebarOpen:true
+// ── STATE ────────────────────────────────────────────────────────────────────
+const S={
+  leads:[],templates:[],categories:[],
+  tab:"leads",                          // ← Default: leads
+  f:{search:"",status:"all",category:"all",sort:"created_date",dir:"desc",page:1,showAll:false},
+  sel:new Set(),sbOpen:true
 };
 
-const STATUSES = ["New","Contacted","Interested","Follow Up","Converted","Not Interested","Lost"];
-const SC = {New:"#3b82f6",Contacted:"#10b981",Interested:"#8b5cf6","Follow Up":"#f59e0b",Converted:"#22c55e","Not Interested":"#ef4444",Lost:"#94a3b8"};
-const PER = 10;
-const DEF_T = [
-  {id:"t1",name:"Initial Greeting",message:"Hello {name}! 👋 I came across your inquiry and would love to help. When would be a good time to connect?"},
+const STATUSES=["New","Contacted","Interested","Follow Up","Converted","Not Interested","Lost"];
+const SC={New:"#3b82f6",Contacted:"#10b981",Interested:"#8b5cf6","Follow Up":"#f59e0b",Converted:"#22c55e","Not Interested":"#ef4444",Lost:"#94a3b8"};
+const PER=20;                           // ← 20 per page default
+const DEF_T=[
+  {id:"t1",name:"Initial Greeting",message:"Hello {name}! 👋 I came across your inquiry and would love to help. When is a good time to connect?"},
   {id:"t2",name:"Follow Up",message:"Hi {name}, just following up on our last conversation. Any questions? Happy to help! 😊"},
   {id:"t3",name:"New Listing",message:"Hi {name}! 🏠 I have a new listing matching your requirements. Want to schedule a visit?"},
   {id:"t4",name:"Post Meeting",message:"Thank you for your time today, {name}! I'll send the proposal shortly. 🙏"},
 ];
-const DEF_C = ["Residential","Commercial","Investment","Rental","Industrial"];
+const DEF_C=["Residential","Commercial","Investment","Rental","Industrial"];
 
-// ── UTILS ─────────────────────────────────────────────────────────────────────
-const $ = id => document.getElementById(id);
-const today = () => new Date().toISOString().split("T")[0];
-
-let _toast;
-function toast(msg, type="ok"){
+// ── UTILS ────────────────────────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+const today=()=>new Date().toISOString().split("T")[0];
+let _t;
+function toast(msg,type="ok"){
   const e=$("toast");
-  const bg=type==="ok"?"background:#f0fdf4;border:1.5px solid #86efac;color:#166534":"background:#fef2f2;border:1.5px solid #fca5a5;color:#991b1b";
-  e.style.cssText=`display:flex;position:fixed;bottom:22px;right:22px;z-index:9999;align-items:center;gap:8px;padding:11px 16px;border-radius:11px;font-size:12px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.12);animation:toastIn .2s ease;max-width:340px;${bg}`;
-  e.innerHTML=(type==="ok"?"✅ ":"⚠️ ")+msg;
-  clearTimeout(_toast); _toast=setTimeout(()=>e.style.display="none",3500);
+  const ok=type==="ok";
+  e.style.cssText=`display:flex;position:fixed;bottom:20px;right:20px;z-index:9999;align-items:center;gap:8px;padding:11px 16px;border-radius:11px;font-size:12px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.12);animation:toastIn .2s ease;max-width:340px;${ok?"background:#f0fdf4;border:1.5px solid #86efac;color:#166534":"background:#fef2f2;border:1.5px solid #fca5a5;color:#991b1b"}`;
+  e.innerHTML=(ok?"✅ ":"⚠️ ")+msg;
+  clearTimeout(_t);_t=setTimeout(()=>e.style.display="none",3500);
 }
+function closeModal(){$("modal-wrap").innerHTML="";}
+function modal(html,mw=540){$("modal-wrap").innerHTML=`<div class="ov" onclick="if(event.target===this)closeModal()"><div class="modal" style="max-width:${mw}px">${html}</div></div>`;}
+const mX=()=>`<button onclick="closeModal()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:19px;padding:2px 6px">✕</button>`;
+function badge(st){const c=SC[st]||"#94a3b8";return `<span class="badge" style="background:${c}18;color:${c};border:1px solid ${c}30"><span style="width:5px;height:5px;border-radius:50%;background:${c};flex-shrink:0"></span>${st}</span>`;}
+function setDB(ok){$("dbdot").style.background=ok?"#22c55e":"#ef4444";$("dbst").textContent=ok?"Supabase live":"DB error";}
+function setCount(){const e=$("lcount");if(e)e.textContent=S.leads.length;}
 
-function closeModal(){ $("modal-wrap").innerHTML=""; }
-function modal(html, mw=540){
-  $("modal-wrap").innerHTML=`<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal" style="max-width:${mw}px">${html}</div></div>`;
+// ── SIDEBAR ──────────────────────────────────────────────────────────────────
+function toggleSB(force){
+  const open=force!==undefined?force:!S.sbOpen;
+  S.sbOpen=open;
+  const sb=$("sidebar"),main=$("main"),btn=$("tbtn"),ov=$("sb-ov");
+  if(open){
+    sb.classList.remove("hidden");
+    if(window.innerWidth>768){main.classList.remove("full");btn.classList.add("sh");}
+    else{ov.classList.add("show");}
+  }else{
+    sb.classList.add("hidden");main.classList.add("full");btn.classList.remove("sh");ov.classList.remove("show");
+  }
 }
-function mClose(){ return `<button onclick="closeModal()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;line-height:1;padding:2px 6px;border-radius:6px" title="Close">✕</button>`; }
+function initSB(){if(window.innerWidth<=768)toggleSB(false);else toggleSB(true);}
+window.addEventListener("resize",()=>{if(window.innerWidth>768&&S.sbOpen){$("main").classList.remove("full");$("tbtn").classList.add("sh");}});
 
-function badge(st){
-  const c=SC[st]||"#94a3b8";
-  return `<span class="badge" style="background:${c}18;color:${c};border:1px solid ${c}30"><span style="width:5px;height:5px;border-radius:50%;background:${c};flex-shrink:0"></span>${st}</span>`;
-}
-
-function setDbStatus(ok){
-  $("db-dot").style.background=ok?"#22c55e":"#ef4444";
-  $("db-status").textContent=ok?"Supabase live":"DB error";
-}
-function setCount(){ const e=$("leads-count"); if(e) e.textContent=S.leads.length; }
-
-function navigate(tab, closeSb=true){
+function go(tab){
   S.tab=tab;
   document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
   $("nav-"+tab)?.classList.add("active");
-  // Auto-close sidebar on mobile after navigation
-  if(closeSb && window.innerWidth<=768) toggleSidebar(false);
+  if(window.innerWidth<=768)toggleSB(false);
   render();
 }
 
-// ── SIDEBAR ───────────────────────────────────────────────────────────────────
-function toggleSidebar(forceState){
-  const open = forceState !== undefined ? forceState : !S.sidebarOpen;
-  S.sidebarOpen = open;
-  const sb=$("sidebar"), main=$("main"), btn=$("toggle-btn"), ov=$("sb-overlay");
-  if(open){
-    sb.classList.remove("hidden");
-    if(window.innerWidth>768){ main.classList.remove("full"); btn.classList.add("shifted"); }
-    else { ov.classList.remove("hidden"); btn.classList.add("shifted"); }
-  } else {
-    sb.classList.add("hidden"); main.classList.add("full"); btn.classList.remove("shifted");
-    ov.classList.add("hidden");
-  }
-}
-
-// Init sidebar state based on screen size
-function initSidebar(){
-  if(window.innerWidth<=768){ toggleSidebar(false); } else { toggleSidebar(true); }
-}
-window.addEventListener("resize",()=>{ if(window.innerWidth>768 && S.sidebarOpen){ $("main").classList.remove("full"); $("toggle-btn").classList.add("shifted"); } });
-
-// ── COLUMN MAPPER (smart CSV/Excel) ──────────────────────────────────────────
-function mapCol(headers){
-  const m={};
-  headers.forEach((h,i)=>{
-    const k=h.toLowerCase().replace(/[\s_\-\.]/g,"");
-    if(!m.name      && (k==="name"||k==="fullname"||k==="leadname"||k==="customername")) m.name=i;
-    if(!m.phone     && (k.includes("phone")||k.includes("mobile")||k.includes("contact")||k.includes("cell")||k.includes("whatsapp"))) m.phone=i;
-    if(!m.email     && (k.includes("email")||k.includes("mail"))) m.email=i;
-    if(!m.website   && (k.includes("website")||k.includes("web")||k.includes("url")||k.includes("site"))) m.website=i;
-    if(!m.address   && (k.includes("address")||k.includes("addr")||k.includes("street")||k.includes("location"))) m.address=i;
-    if(!m.area      && (k.includes("area")||k.includes("zone")||k.includes("locality")||k.includes("region")||k.includes("city"))) m.area=i;
-    if(!m.category  && (k.includes("category")||k.includes("cat")||k.includes("type")||k.includes("segment"))) m.category=i;
-    if(!m.status    && k.includes("status")) m.status=i;
-    if(!m.notes     && (k.includes("note")||k.includes("remark")||k.includes("comment")||k.includes("description"))) m.notes=i;
-    if(!m.follow_up_date && (k.includes("follow")||k.includes("followup")||k.includes("fudate")||k.includes("nextcall"))) m.follow_up_date=i;
-    if(!m.last_contacted && (k.includes("last")&&(k.includes("contact")||k.includes("called")||k.includes("spoke")))) m.last_contacted=i;
-  });
-  return m;
-}
-
-function rowToLead(vals, m){
-  const g=(k)=>(m[k]!==undefined?vals[m[k]]||"":"");
-  return {
-    id: Date.now().toString()+Math.random().toString(36).slice(2,7),
-    name: g("name"), phone: g("phone"), email: g("email"),
-    website: g("website"), address: g("address"), area: g("area"),
-    category: g("category")||S.categories[0]||"",
-    status: g("status")||"New", notes: g("notes"),
-    follow_up_date: g("follow_up_date"), last_contacted: g("last_contacted"),
-    created_date: today()
-  };
-}
-
-// Parse CSV or Excel file → array of {headers[], rows[][]}
-function parseFile(file){
-  return new Promise((resolve, reject)=>{
-    const ext = file.name.split(".").pop().toLowerCase();
-    if(ext==="csv"||ext==="txt"){
-      const r=new FileReader();
-      r.onload=ev=>{
-        try{
-          const lines=ev.target.result.split(/\r?\n/).filter(l=>l.trim());
-          if(!lines.length){reject(new Error("Empty file")); return;}
-          const headers=lines[0].split(",").map(h=>h.replace(/^"|"$/g,"").trim());
-          const rows=lines.slice(1).map(l=>l.split(",").map(v=>v.replace(/^"|"$/g,"").trim()));
-          resolve({headers,rows});
-        }catch(e){reject(e);}
-      };
-      r.onerror=()=>reject(new Error("Read failed"));
-      r.readAsText(file);
-    } else if(ext==="xlsx"||ext==="xls"||ext==="ods"){
-      const r=new FileReader();
-      r.onload=ev=>{
-        try{
-          const wb=XLSX.read(ev.target.result,{type:"binary"});
-          const ws=wb.Sheets[wb.SheetNames[0]];
-          const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
-          if(!data.length){reject(new Error("Empty sheet")); return;}
-          const headers=data[0].map(h=>String(h).trim());
-          const rows=data.slice(1).map(r=>r.map(v=>String(v).trim()));
-          resolve({headers,rows});
-        }catch(e){reject(e);}
-      };
-      r.onerror=()=>reject(new Error("Read failed"));
-      r.readAsBinaryString(file);
-    } else {
-      reject(new Error("Unsupported file type. Use CSV, XLS, or XLSX."));
-    }
-  });
-}
-
-// ── INIT ──────────────────────────────────────────────────────────────────────
+// ── INIT ─────────────────────────────────────────────────────────────────────
 async function init(){
-  initSidebar();
+  initSB();
   try{
-    const [leads,tpls,cats]=await Promise.all([
+    const[leads,tpls,cats]=await Promise.all([
       api.get("leads","order=created_date.desc"),
       api.get("templates"),
       api.get("categories")
     ]);
     S.leads=leads||[];
-    S.templates=tpls?.length ? tpls : (await api.post("templates",DEF_T), DEF_T);
-    S.categories=cats?.length ? cats.map(r=>r.name) : (await api.post("categories",DEF_C.map(n=>({name:n}))), DEF_C);
-    setDbStatus(true); setCount(); render();
+    S.templates=tpls?.length?tpls:(await api.post("templates",DEF_T),DEF_T);
+    S.categories=cats?.length?cats.map(r=>r.name):(await api.post("categories",DEF_C.map(n=>({name:n}))),DEF_C);
+    setDB(true);setCount();render();
   }catch(e){
-    console.error(e); setDbStatus(false);
-    S.templates=DEF_T; S.categories=DEF_C;
-    toast("DB error: "+e.message,"err"); render();
+    console.error(e);setDB(false);
+    S.templates=DEF_T;S.categories=DEF_C;
+    toast("DB error: "+e.message,"err");render();
   }
 }
 
-// ── RENDER ────────────────────────────────────────────────────────────────────
 function render(){
-  const m=$("main"); if(!m) return;
-  if(S.tab==="dashboard")  m.innerHTML=renderDash();
-  if(S.tab==="leads")      m.innerHTML=renderLeads();
-  if(S.tab==="templates")  m.innerHTML=renderTpls();
-  if(S.tab==="categories") m.innerHTML=renderCats();
+  const m=$("main");if(!m)return;
+  if(S.tab==="dashboard") m.innerHTML=renderDash();
+  if(S.tab==="leads")     m.innerHTML=renderLeads();
+  if(S.tab==="templates") m.innerHTML=renderTpls();
+  if(S.tab==="categories")m.innerHTML=renderCats();
 }
 
-// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+// ── DASHBOARD ────────────────────────────────────────────────────────────────
 function renderDash(){
-  const l=S.leads, t=today();
+  const l=S.leads,t=today();
   const st=[
     {lbl:"Total Leads",v:l.length,c:"#22c55e"},
-    {lbl:"New",v:l.filter(x=>x.status==="New").length,c:"#3b82f6",click:true},
+    {lbl:"New",v:l.filter(x=>x.status==="New").length,c:"#3b82f6",cl:true},
     {lbl:"Interested",v:l.filter(x=>x.status==="Interested").length,c:"#8b5cf6"},
-    {lbl:"Follow Up Today",v:l.filter(x=>x.follow_up_date===t).length,c:"#f59e0b"},
+    {lbl:"Follow-up Today",v:l.filter(x=>x.follow_up_date===t).length,c:"#f59e0b"},
     {lbl:"Converted",v:l.filter(x=>x.status==="Converted").length,c:"#22c55e"},
   ];
   const dist=STATUSES.map(s=>({s,n:l.filter(x=>x.status===s).length,c:SC[s]})).filter(d=>d.n>0);
   const maxN=Math.max(...dist.map(d=>d.n),1);
   const cats=S.categories.map(c=>({c,n:l.filter(x=>x.category===c).length})).filter(x=>x.n>0);
   const recent=[...l].sort((a,b)=>(b.created_date||"").localeCompare(a.created_date||"")).slice(0,5);
-  return `<div class="fade" style="padding-top:8px">
-    <div style="margin-bottom:20px">
-      <h1 style="font-size:22px;font-weight:700;color:var(--text)">Dashboard</h1>
-      <p style="color:var(--muted);font-size:12px;margin-top:3px">${new Date().toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</p>
+  return `<div class="fade" style="padding-top:6px">
+    <div style="margin-bottom:18px"><h1 class="page-title" style="font-size:21px;font-weight:700;margin-top:30px">Dashboard</h1>
+    <p style="color:var(--muted);font-size:12px;margin-top:2px">${new Date().toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</p></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      ${st.map(s=>`<div class="stat ${s.cl?"cl":""}" ${s.cl?`onclick="go('leads')"`:""}><p style="color:var(--muted);font-size:10px;margin-bottom:4px;font-weight:500">${s.lbl}</p><p style="font-size:26px;font-weight:700;color:${s.c};line-height:1">${s.v}</p></div>`).join("")}
     </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
-      ${st.map(s=>`<div class="stat ${s.click?"click":""}" ${s.click?'onclick="navigate(\'leads\')"':""}>
-        <p style="color:var(--muted);font-size:11px;margin-bottom:5px;font-weight:500">${s.lbl}</p>
-        <p style="font-size:26px;font-weight:700;color:${s.c};line-height:1">${s.v}</p>
-      </div>`).join("")}
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
-      <div class="card" style="padding:18px">
-        <p style="font-weight:600;font-size:13px;color:var(--text);margin-bottom:14px">Status Distribution</p>
-        ${dist.length?dist.map(({s,n,c})=>`<div style="margin-bottom:10px">
-          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-            <span style="font-size:11px;color:var(--muted)">${s}</span>
-            <span style="font-size:11px;font-weight:600;color:${c}">${n}</span>
-          </div>
-          <div style="height:6px;background:var(--surface);border-radius:999px;border:1px solid var(--border)">
-            <div style="height:100%;width:${(n/maxN)*100}%;background:${c};border-radius:999px;transition:width .6s ease"></div>
-          </div></div>`).join(""):"<p style='color:var(--muted);font-size:12px'>No data yet</p>"}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div class="card" style="padding:16px">
+        <p style="font-weight:600;font-size:12px;color:var(--text);margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Status Distribution</p>
+        ${dist.length?dist.map(({s,n,c})=>`<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:11px;color:var(--muted)">${s}</span><span style="font-size:11px;font-weight:600;color:${c}">${n}</span></div><div style="height:5px;background:var(--surface);border-radius:999px;border:1px solid var(--border)"><div style="height:100%;width:${(n/maxN)*100}%;background:${c};border-radius:999px"></div></div></div>`).join(""):"<p style='color:var(--muted);font-size:12px'>No data yet</p>"}
       </div>
-      <div class="card" style="padding:18px">
-        <p style="font-weight:600;font-size:13px;color:var(--text);margin-bottom:14px">Categories</p>
-        ${cats.length?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${cats.map(({c,n})=>`
-          <div style="background:var(--surface);border-radius:10px;padding:11px 13px;border:1.5px solid var(--border)">
-            <p style="font-size:20px;font-weight:700;color:var(--accent);line-height:1">${n}</p>
-            <p style="font-size:11px;color:var(--muted);margin-top:3px">${c}</p>
-          </div>`).join("")}</div>`:"<p style='color:var(--muted);font-size:12px'>No data yet</p>"}
+      <div class="card" style="padding:16px">
+        <p style="font-weight:600;font-size:12px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Categories</p>
+        ${cats.length?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">${cats.map(({c,n})=>`<div style="background:var(--surface);border-radius:9px;padding:10px 12px;border:1.5px solid var(--border)"><p style="font-size:18px;font-weight:700;color:var(--accent);line-height:1">${n}</p><p style="font-size:10px;color:var(--muted);margin-top:2px">${c}</p></div>`).join("")}</div>`:"<p style='color:var(--muted);font-size:12px'>No data yet</p>"}
       </div>
     </div>
-    ${recent.length?`<div class="card" style="padding:18px">
-      <p style="font-weight:600;font-size:13px;color:var(--text);margin-bottom:14px">Recently Added</p>
-      <div style="overflow-x:auto"><table class="table">
-        <thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Category</th><th>Date</th></tr></thead>
-        <tbody>${recent.map(l=>`<tr>
-          <td style="font-weight:500">${l.name}</td>
-          <td style="font-family:monospace;color:var(--muted);font-size:11px">${l.phone}</td>
-          <td>${badge(l.status)}</td>
-          <td style="color:var(--muted)">${l.category||"—"}</td>
-          <td style="color:var(--muted);font-size:11px">${l.created_date||"—"}</td>
-        </tr>`).join("")}</tbody>
-      </table></div></div>`:""}
+    ${recent.length?`<div class="card" style="padding:16px"><p style="font-weight:600;font-size:12px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Recently Added</p>
+    <div style="overflow-x:auto"><table class="table"><thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Category</th><th>Date</th></tr></thead>
+    <tbody>${recent.map(l=>`<tr><td style="font-weight:500">${l.name}</td><td style="font-family:monospace;color:var(--muted);font-size:11px">${l.phone}</td><td>${badge(l.status)}</td><td style="color:var(--muted)">${l.category||"—"}</td><td style="color:var(--muted);font-size:11px">${l.created_date||"—"}</td></tr>`).join("")}
+    </tbody></table></div></div>`:""}
   </div>`;
 }
 
-// ── LEADS ─────────────────────────────────────────────────────────────────────
-function filteredLeads(){
-  const f=S.f; let r=[...S.leads];
-  if(f.search){ const q=f.search.toLowerCase(); r=r.filter(l=>(l.name||"").toLowerCase().includes(q)||(l.phone||"").includes(q)||(l.email||"").toLowerCase().includes(q)||(l.area||"").toLowerCase().includes(q)||(l.category||"").toLowerCase().includes(q)); }
-  if(f.status!=="all") r=r.filter(l=>l.status===f.status);
-  if(f.category!=="all") r=r.filter(l=>l.category===f.category);
-  r.sort((a,b)=>{ const av=a[f.sort]||"",bv=b[f.sort]||""; return f.dir==="asc"?av.localeCompare(bv):bv.localeCompare(av); });
+// ── LEADS ────────────────────────────────────────────────────────────────────
+function filtL(){
+  const f=S.f;let r=[...S.leads];
+  if(f.search){const q=f.search.toLowerCase();r=r.filter(l=>(l.name||"").toLowerCase().includes(q)||(l.phone||"").includes(q)||(l.email||"").toLowerCase().includes(q)||(l.area||"").toLowerCase().includes(q)||(l.category||"").toLowerCase().includes(q)||(l.notes||"").toLowerCase().includes(q));}
+  if(f.status!=="all")r=r.filter(l=>l.status===f.status);
+  if(f.category!=="all")r=r.filter(l=>l.category===f.category);
+  r.sort((a,b)=>{const av=a[f.sort]||"",bv=b[f.sort]||"";return f.dir==="asc"?av.localeCompare(bv):bv.localeCompare(av);});
   return r;
 }
 
 function renderLeads(){
-  const f=S.f, rows=filteredLeads(), pages=Math.ceil(rows.length/PER)||1;
-  const paged=rows.slice((f.page-1)*PER, f.page*PER);
-  const selN=S.sel.size, allChk=selN===paged.length&&paged.length>0;
-  const arr=field=>f.sort===field?(f.dir==="asc"?"▲":"▼"):"";
-  const pgBtns=()=>{
-    let h=`<button class="btn btn-secondary btn-sm" onclick="lPage(${Math.max(1,f.page-1)})" ${f.page===1?"disabled":""}>‹</button>`;
+  const f=S.f,rows=filtL(),total=rows.length;
+  const perPage=f.showAll?total:PER;
+  const pages=Math.ceil(total/perPage)||1;
+  const paged=f.showAll?rows:rows.slice((f.page-1)*PER,(f.page)*PER);
+  const selN=S.sel.size,allChk=selN===paged.length&&paged.length>0;
+  const arr=k=>f.sort===k?(f.dir==="asc"?"▲":"▼"):"";
+
+  // Pagination
+  let pgHtml="";
+  if(!f.showAll&&pages>1){
+    pgHtml+=`<button class="btn btn-s btn-sm" onclick="lPage(${Math.max(1,f.page-1)})" ${f.page===1?"disabled":""}>‹</button>`;
     const s=Math.max(1,Math.min(pages-4,f.page-2));
-    for(let i=0;i<Math.min(5,pages);i++){const p=s+i;h+=`<button class="btn ${p===f.page?"btn-primary":"btn-secondary"} btn-sm" onclick="lPage(${p})">${p}</button>`;}
-    return h+`<button class="btn btn-secondary btn-sm" onclick="lPage(${Math.min(pages,f.page+1)})" ${f.page===pages?"disabled":""}>›</button>`;
-  };
-  return `<div class="fade" style="padding-top:8px">
-    <div class="top-bar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px">
-      <div>
-        <h1 style="font-size:22px;font-weight:700;color:var(--text)">Leads</h1>
-        <p style="color:var(--muted);font-size:12px">${rows.length} leads${f.search||f.status!=="all"||f.category!=="all"?" (filtered)":""}</p>
+    for(let i=0;i<Math.min(5,pages);i++){const p=s+i;pgHtml+=`<button class="btn ${p===f.page?"btn-p":"btn-s"} btn-sm" onclick="lPage(${p})">${p}</button>`;}
+    pgHtml+=`<button class="btn btn-s btn-sm" onclick="lPage(${Math.min(pages,f.page+1)})" ${f.page===pages?"disabled":""}>›</button>`;
+  }
+
+  // Desktop table rows
+  const tRows=paged.map(l=>{
+    const sel=S.sel.has(l.id),od=l.follow_up_date&&l.follow_up_date<today();
+    return `<tr style="background:${sel?"#f0fdf4":""}">
+      <td><input type="checkbox" ${sel?"checked":""} onchange="toggleOne('${l.id}',this.checked)" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px"></td>
+      <td><div style="font-weight:600">${l.name}</div>${l.email?`<div style="font-size:10px;color:var(--muted)">${l.email}</div>`:""}</td>
+      <td>
+        <div style="font-family:monospace;color:var(--muted);font-size:11px;margin-bottom:4px">${l.phone}</div>
+        <div style="display:flex;gap:4px">
+          <button class="btn-wa" onclick="openWA('${l.id}')">💬 WA</button>
+          <button class="btn-call" onclick="window.open('tel:${l.phone}')">📞</button>
+        </div>
+      </td>
+      <td>${badge(l.status)}</td>
+      <td style="color:var(--muted);font-size:12px">${l.category||"—"}</td>
+      <td style="color:var(--muted);font-size:12px">${l.area||"—"}</td>
+      <td style="color:${od?"#ef4444":l.follow_up_date?"#f59e0b":"var(--muted)"};font-size:11px">${l.follow_up_date||"—"}</td>
+      <td style="color:var(--muted);font-size:11px">${l.last_contacted||"—"}</td>
+      <td style="color:var(--muted);font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(l.notes||"").replace(/"/g,"'")}">${l.notes||"—"}</td>
+      <td><div style="display:flex;gap:1px;flex-wrap:nowrap">
+        ${l.email?`<button class="ab" title="Email" onclick="window.open('mailto:${l.email}')">📧</button>`:""}
+        ${l.website?`<button class="ab" title="Website" onclick="window.open('https://${l.website}','_blank')">🌐</button>`:""}
+        <button class="ab" title="Edit" onclick="openLF('${l.id}')">✏️</button>
+        <button class="ab" title="Delete" onclick="delLead('${l.id}')">🗑</button>
+      </div></td>
+    </tr>`;
+  }).join("");
+
+  // Mobile cards — ALL fields visible, WA+Call beside phone
+  const mCards=paged.map(l=>{
+    const sel=S.sel.has(l.id),od=l.follow_up_date&&l.follow_up_date<today();
+    return `<div class="lead-card" style="border-left:3px solid ${SC[l.status]||"#94a3b8"}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <input type="checkbox" ${sel?"checked":""} onchange="toggleOne('${l.id}',this.checked)" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px">
+            <span style="font-weight:700;font-size:14px;color:var(--text)">${l.name}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span style="font-family:monospace;font-size:12px;color:var(--muted)">${l.phone}</span>
+            <button class="btn-wa" onclick="openWA('${l.id}')">💬 WA</button>
+            <button class="btn-call" onclick="window.open('tel:${l.phone}')">📞 Call</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:3px;flex-shrink:0;margin-left:8px">
+          <button class="ab" onclick="openLF('${l.id}')" title="Edit">✏️</button>
+          <button class="ab" onclick="delLead('${l.id}')" title="Delete">🗑</button>
+        </div>
       </div>
-      <div class="btn-group" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-        <label class="btn btn-secondary btn-sm" style="cursor:pointer">
-          📂 Import <input type="file" accept=".csv,.xls,.xlsx,.ods" onchange="openImportPreview(event)" style="display:none">
-        </label>
-        <button class="btn btn-secondary btn-sm" onclick="exportCSV()">⬇ Export</button>
-        <button class="btn btn-primary btn-sm" onclick="openLeadForm()">＋ Add Lead</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:12px">
+        <div><span style="color:var(--muted)">Status: </span>${badge(l.status)}</div>
+        <div><span style="color:var(--muted)">Category: </span><strong>${l.category||"—"}</strong></div>
+        <div><span style="color:var(--muted)">Area: </span><strong>${l.area||"—"}</strong></div>
+        ${l.email?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Email: </span><a href="mailto:${l.email}" style="color:var(--blue);text-decoration:none">${l.email}</a></div>`:""}
+        ${l.website?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Web: </span><a href="https://${l.website}" target="_blank" style="color:var(--blue);text-decoration:none">${l.website}</a></div>`:""}
+        ${l.address?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Address: </span><strong>${l.address}</strong></div>`:""}
+        ${l.follow_up_date?`<div><span style="color:var(--muted)">Follow-up: </span><strong style="color:${od?"#ef4444":"#f59e0b"}">${l.follow_up_date}</strong></div>`:""}
+        ${l.last_contacted?`<div><span style="color:var(--muted)">Last contact: </span><strong>${l.last_contacted}</strong></div>`:""}
+        ${l.notes?`<div style="grid-column:1/-1;margin-top:4px;padding:6px 8px;background:var(--surface);border-radius:7px;border:1px solid var(--border);color:var(--muted);">${l.notes}</div>`:""}
+      </div>
+    </div>`;
+  }).join("");
+
+  return `<div class="fade" style="padding-top:6px">
+    <div class="top-bar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:8px;margin-top:30px">
+      <div>
+        <h1 class="page-title" style="font-size:21px;font-weight:700">Leads</h1>
+        <p style="color:var(--muted);font-size:11px">${total} leads${f.search||f.status!=="all"||f.category!=="all"?" (filtered)":""} · showing ${f.showAll?"all":PER+"/page"}</p>
+      </div>
+      <div class="actions" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+        <label class="btn btn-s btn-sm" style="cursor:pointer">📂 Import <input type="file" accept=".csv,.xls,.xlsx,.ods" onchange="openImport(event)" style="display:none"></label>
+        <button class="btn btn-s btn-sm" onclick="exportCSV()">⬇ Export</button>
+        <button class="btn btn-p btn-sm" onclick="openLF()">＋ Add Lead</button>
       </div>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+
+    <div class="filter-row" style="display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap">
       <div style="position:relative;flex:1;min-width:160px">
-        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px">🔍</span>
-        <input class="input" style="padding-left:30px;font-size:12px" placeholder="Search name, phone, area, category..." value="${f.search}" oninput="lFilter('search',this.value)">
+        <span style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px">🔍</span>
+        <input class="input" style="padding-left:28px;font-size:12px" placeholder="Search name, phone, area, notes..." value="${f.search}" oninput="lFil('search',this.value)">
       </div>
-      <select class="input" style="width:auto;padding:8px 10px;font-size:12px;cursor:pointer" onchange="lFilter('status',this.value)">
+      <select class="input" style="width:auto;padding:8px 9px;font-size:12px;cursor:pointer" onchange="lFil('status',this.value)">
         <option value="all" ${f.status==="all"?"selected":""}>All Status</option>
         ${STATUSES.map(s=>`<option ${f.status===s?"selected":""}>${s}</option>`).join("")}
       </select>
-      <select class="input" style="width:auto;padding:8px 10px;font-size:12px;cursor:pointer" onchange="lFilter('category',this.value)">
+      <select class="input" style="width:auto;padding:8px 9px;font-size:12px;cursor:pointer" onchange="lFil('category',this.value)">
         <option value="all" ${f.category==="all"?"selected":""}>All Categories</option>
         ${S.categories.map(c=>`<option ${f.category===c?"selected":""}>${c}</option>`).join("")}
       </select>
     </div>
-    ${selN?`<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--accent-dim);border:1.5px solid #86efac;border-radius:10px;margin-bottom:10px;flex-wrap:wrap">
+
+    ${selN?`<div style="display:flex;align-items:center;gap:7px;padding:8px 14px;background:var(--accent-dim);border:1.5px solid #86efac;border-radius:10px;margin-bottom:10px;flex-wrap:wrap">
       <span style="font-size:12px;color:var(--accent-d);font-weight:600">✓ ${selN} selected</span>
       <div style="flex:1"></div>
-      <button class="btn btn-secondary btn-sm" onclick="openBulkModal()">📝 Bulk Update</button>
-      <button class="btn btn-danger btn-sm" onclick="bulkDelete()">🗑 Delete</button>
-      <button class="btn btn-ghost btn-sm" onclick="S.sel=new Set();render()">✕ Clear</button>
+      <button class="btn btn-s btn-sm" onclick="openBulk()">📝 Update</button>
+      <button class="btn btn-d btn-sm" onclick="bulkDel()">🗑 Delete</button>
+      <button class="btn btn-g btn-sm" onclick="S.sel=new Set();render()">✕</button>
     </div>`:""}
-    <div class="card" style="overflow:hidden">
+
+    <!-- Desktop table -->
+    <div class="card desktop-only" style="overflow:hidden">
       <div style="overflow-x:auto">
-        <table class="table" style="min-width:800px">
+        <table class="table" style="min-width:900px">
           <thead><tr>
-            <th style="width:36px"><input type="checkbox" ${allChk?"checked":""} onchange="toggleAll(this.checked)" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px"></th>
-            <th class="sortable" onclick="lSort('name')">Name ${arr("name")}</th>
-            <th class="sortable" onclick="lSort('phone')">Phone ${arr("phone")}</th>
-            <th class="sortable" onclick="lSort('status')">Status ${arr("status")}</th>
-            <th class="sortable hide-mobile" onclick="lSort('category')">Category ${arr("category")}</th>
-            <th class="sortable hide-mobile" onclick="lSort('area')">Area ${arr("area")}</th>
-            <th class="sortable hide-mobile" onclick="lSort('follow_up_date')">Follow Up ${arr("follow_up_date")}</th>
-            <th class="hide-mobile" style="color:var(--muted);font-size:10px">Last Contact</th>
-            <th>Actions</th>
+            <th style="width:32px"><input type="checkbox" ${allChk?"checked":""} onchange="togAll(this.checked)" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px"></th>
+            <th class="s" onclick="lSort('name')">Name ${arr("name")}</th>
+            <th class="s" onclick="lSort('phone')">Phone + Quick Actions ${arr("phone")}</th>
+            <th class="s" onclick="lSort('status')">Status ${arr("status")}</th>
+            <th class="s" onclick="lSort('category')">Category ${arr("category")}</th>
+            <th class="s" onclick="lSort('area')">Area ${arr("area")}</th>
+            <th class="s" onclick="lSort('follow_up_date')">Follow Up ${arr("follow_up_date")}</th>
+            <th class="s" onclick="lSort('last_contacted')">Last Contact ${arr("last_contacted")}</th>
+            <th>Notes</th>
+            <th>More</th>
           </tr></thead>
-          <tbody>
-            ${paged.length===0?`<tr><td colspan="9" style="padding:40px;text-align:center;color:var(--muted)">No leads found. Add your first lead!</td></tr>`
-            :paged.map(l=>{
-              const sel=S.sel.has(l.id);
-              const overdue=l.follow_up_date&&l.follow_up_date<today();
-              return `<tr style="background:${sel?"#f0fdf4":"transparent"}">
-                <td><input type="checkbox" ${sel?"checked":""} onchange="toggleOne('${l.id}',this.checked)" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px"></td>
-                <td><div style="font-weight:600;color:var(--text)">${l.name}</div>${l.email?`<div style="font-size:10px;color:var(--muted)">${l.email}</div>`:""}</td>
-                <td style="font-family:monospace;color:var(--muted);font-size:11px">${l.phone}</td>
-                <td>${badge(l.status)}</td>
-                <td class="hide-mobile" style="color:var(--muted);font-size:12px">${l.category||"—"}</td>
-                <td class="hide-mobile" style="color:var(--muted);font-size:12px">${l.area||"—"}</td>
-                <td class="hide-mobile" style="color:${overdue?"#ef4444":l.follow_up_date?"#f59e0b":"var(--muted)"};font-size:11px">${l.follow_up_date||"—"}</td>
-                <td class="hide-mobile" style="color:var(--muted);font-size:11px">${l.last_contacted||"—"}</td>
-                <td><div style="display:flex;gap:1px">
-                  <button class="ab" title="WhatsApp" onclick="openWpModal('${l.id}')">💬</button>
-                  ${l.email?`<button class="ab" title="Email" onclick="window.open('mailto:${l.email}')">📧</button>`:""}
-                  <button class="ab" title="Call" onclick="window.open('tel:${l.phone}')">📞</button>
-                  ${l.website?`<button class="ab" title="Website" onclick="window.open('https://${l.website}','_blank')">🌐</button>`:""}
-                  <button class="ab" title="Edit" onclick="openLeadForm('${l.id}')">✏️</button>
-                  <button class="ab" title="Delete" onclick="deleteLead('${l.id}')">🗑</button>
-                </div></td>
-              </tr>`;
-            }).join("")}
-          </tbody>
+          <tbody>${tRows.length?tRows:`<tr><td colspan="10" style="padding:40px;text-align:center;color:var(--muted)">No leads found. Add your first lead!</td></tr>`}</tbody>
         </table>
       </div>
-      ${pages>1?`<div style="padding:10px 16px;border-top:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-        <span style="font-size:11px;color:var(--muted)">Page ${f.page} of ${pages} · ${rows.length} total</span>
-        <div style="display:flex;gap:4px">${pgBtns()}</div>
-      </div>`:""}
+      <div style="padding:10px 16px;border-top:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;color:var(--muted)">${f.showAll?`Showing all ${total}`:`Page ${f.page} of ${pages} · ${total} total`}</span>
+          <button class="btn btn-s btn-xs" onclick="lFil('showAll',${!f.showAll})">${f.showAll?"📄 Paginate":"👁 Show All"}</button>
+        </div>
+        ${!f.showAll?`<div style="display:flex;gap:4px">${pgHtml}</div>`:""}
+      </div>
+    </div>
+
+    <!-- Mobile cards -->
+    <div class="mobile-only">
+      ${mCards.length?mCards:`<div style="padding:40px;text-align:center;color:var(--muted)">No leads found. Add your first lead!</div>`}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;flex-wrap:wrap;gap:8px">
+        <span style="font-size:11px;color:var(--muted)">${f.showAll?`All ${total} leads`:`${paged.length} of ${total} · Page ${f.page}/${pages}`}</span>
+        <div style="display:flex;gap:5px;align-items:center">
+          <button class="btn btn-s btn-xs" onclick="lFil('showAll',${!f.showAll})">${f.showAll?"📄 Paginate":"👁 Show All"}</button>
+          ${!f.showAll?`<button class="btn btn-s btn-xs" onclick="lPage(${Math.max(1,f.page-1)})" ${f.page===1?"disabled":""}>‹ Prev</button>
+          <button class="btn btn-s btn-xs" onclick="lPage(${Math.min(pages,f.page+1)})" ${f.page===pages?"disabled":""}>Next ›</button>`:""}
+        </div>
+      </div>
     </div>
   </div>`;
 }
 
-function lFilter(k,v){ S.f[k]=v; S.f.page=1; render(); }
-function lSort(f){ if(S.f.sort===f) S.f.dir=S.f.dir==="asc"?"desc":"asc"; else{S.f.sort=f;S.f.dir="asc";} render(); }
-function lPage(p){ S.f.page=p; render(); }
-function toggleAll(checked){ const paged=filteredLeads().slice((S.f.page-1)*PER,S.f.page*PER); if(checked) paged.forEach(l=>S.sel.add(l.id)); else S.sel.clear(); render(); }
-function toggleOne(id,checked){ checked?S.sel.add(id):S.sel.delete(id); render(); }
+function lFil(k,v){S.f[k]=v;if(k!=="showAll")S.f.page=1;render();}
+function lSort(k){if(S.f.sort===k)S.f.dir=S.f.dir==="asc"?"desc":"asc";else{S.f.sort=k;S.f.dir="asc";}render();}
+function lPage(p){S.f.page=p;render();}
+function togAll(c){const p=filtL().slice((S.f.page-1)*PER,S.f.page*PER);if(c)p.forEach(l=>S.sel.add(l.id));else S.sel.clear();render();}
+function toggleOne(id,c){c?S.sel.add(id):S.sel.delete(id);render();}
 
-async function deleteLead(id){
-  if(!confirm("Delete this lead?")) return;
-  try{ await api.del("leads",`id=eq.${id}`); S.leads=S.leads.filter(l=>l.id!==id); S.sel.delete(id); setCount(); toast("Lead deleted"); render(); }
-  catch(e){ toast("Delete failed","err"); }
+async function delLead(id){
+  if(!confirm("Delete this lead?"))return;
+  try{await api.del("leads",`id=eq.${id}`);S.leads=S.leads.filter(l=>l.id!==id);S.sel.delete(id);setCount();toast("Lead deleted");render();}
+  catch(e){toast("Delete failed","err");}
 }
-
-async function bulkDelete(){
-  const ids=[...S.sel]; if(!ids.length||!confirm(`Delete ${ids.length} leads?`)) return;
-  try{ await api.del("leads",`id=in.(${ids.join(",")})`); S.leads=S.leads.filter(l=>!S.sel.has(l.id)); S.sel.clear(); setCount(); toast(`${ids.length} leads deleted`); render(); }
-  catch(e){ toast("Error: "+e.message,"err"); }
+async function bulkDel(){
+  const ids=[...S.sel];if(!ids.length||!confirm(`Delete ${ids.length} leads?`))return;
+  try{await api.del("leads",`id=in.(${ids.join(",")})`);S.leads=S.leads.filter(l=>!S.sel.has(l.id));S.sel.clear();setCount();toast(`${ids.length} deleted`);render();}
+  catch(e){toast("Error","err");}
 }
-
 function exportCSV(){
-  const rows=filteredLeads();
+  const rows=filtL();
   const h=["Name","Phone","Email","Website","Address","Area","Status","Category","Follow Up","Last Contacted","Notes"];
   const csv=[h.join(","),...rows.map(l=>[l.name,l.phone,l.email,l.website,l.address,l.area,l.status,l.category,l.follow_up_date,l.last_contacted,l.notes].map(v=>`"${(v||"").replace(/"/g,'""')}"`).join(","))].join("\n");
-  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download="nosh7_leads.csv"; a.click();
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="nosh7_leads.csv";a.click();
   toast("CSV exported!");
 }
 
-// ── IMPORT with preview ───────────────────────────────────────────────────────
-async function openImportPreview(e){
-  const file=e.target.files[0]; if(!file) return;
+// ── IMPORT ────────────────────────────────────────────────────────────────────
+function mapCols(headers){
+  const m={};
+  headers.forEach((h,i)=>{
+    const k=h.toLowerCase().replace(/[\s_\-\.\/]/g,"");
+    if(m.name===undefined&&(k==="name"||k==="fullname"||k==="leadname"||k==="customer"||k==="clientname"))m.name=i;
+    if(m.phone===undefined&&(k.includes("phone")||k.includes("mobile")||k.includes("contact")||k.includes("cell")||k.includes("whatsapp")||k.includes("number")))m.phone=i;
+    if(m.email===undefined&&(k.includes("email")||k.includes("mail")))m.email=i;
+    if(m.website===undefined&&(k.includes("website")||k.includes("web")||k.includes("url")||k.includes("site")))m.website=i;
+    if(m.address===undefined&&(k.includes("address")||k.includes("addr")||k.includes("street")))m.address=i;
+    if(m.area===undefined&&(k.includes("area")||k.includes("zone")||k.includes("locality")||k.includes("city")||k.includes("region")||k.includes("location")))m.area=i;
+    if(m.category===undefined&&(k.includes("category")||k.includes("cat")||k.includes("type")||k.includes("segment")))m.category=i;
+    if(m.status===undefined&&k.includes("status"))m.status=i;
+    if(m.notes===undefined&&(k.includes("note")||k.includes("remark")||k.includes("comment")||k.includes("desc")||k.includes("requirement")))m.notes=i;
+    if(m.follow_up_date===undefined&&(k.includes("follow")||k.includes("duedate")||k.includes("nextcall")||k.includes("callback")))m.follow_up_date=i;
+    if(m.last_contacted===undefined&&(k.includes("last")&&(k.includes("contact")||k.includes("call")||k.includes("spoke"))))m.last_contacted=i;
+  });
+  return m;
+}
+
+function rowToLead(vals,m){
+  const g=k=>m[k]!==undefined?(vals[m[k]]||"").toString().trim():"";
+  return {
+    id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+    name:g("name"),phone:g("phone"),email:g("email"),website:g("website"),
+    address:g("address"),area:g("area"),category:g("category")||S.categories[0]||"",
+    status:STATUSES.includes(g("status"))?g("status"):"New",
+    notes:g("notes"),follow_up_date:g("follow_up_date"),last_contacted:g("last_contacted"),
+    created_date:today()
+  };
+}
+
+async function openImport(e){
+  const file=e.target.files[0];if(!file)return;
   e.target.value="";
   try{
     const {headers,rows}=await parseFile(file);
-    const m=mapCol(headers);
-    const preview=rows.slice(0,5).filter(r=>r.some(v=>v));
+    const m=mapCols(headers);
+    const allLeads=rows.filter(r=>r.some(v=>String(v).trim())).map(r=>rowToLead(r.map(v=>String(v)),m)).filter(l=>l.name&&l.phone);
+    const existMap=new Map(S.leads.map(l=>[(l.phone||"").replace(/\D/g,""),l]));
+    const newL=allLeads.filter(l=>!existMap.has(l.phone.replace(/\D/g,"")));
+    const upd=allLeads.filter(l=>existMap.has(l.phone.replace(/\D/g,"")));
+    window._imp=allLeads;
 
-    // Check how many phones match existing leads
-    const existing=new Set(S.leads.map(l=>l.phone?.trim()));
-    const allLeads=rows.filter(r=>r.some(v=>v)).map(r=>rowToLead(r,m)).filter(l=>l.name&&l.phone);
-    const updates=allLeads.filter(l=>existing.has(l.phone.trim()));
-    const inserts=allLeads.filter(l=>!existing.has(l.phone.trim()));
-
+    const detectedFields=Object.keys(m).filter(k=>m[k]!==undefined);
     modal(`
-      <div class="modal-header">
-        <h3 style="font-weight:700;font-size:15px;color:var(--text)">📂 Import Preview</h3>
-        ${mClose()}
-      </div>
-      <div class="modal-body">
-        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-          <div style="flex:1;min-width:100px;padding:12px 14px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;text-align:center">
-            <p style="font-size:22px;font-weight:700;color:#16a34a">${inserts.length}</p>
-            <p style="font-size:11px;color:#166534;margin-top:2px">New leads</p>
-          </div>
-          <div style="flex:1;min-width:100px;padding:12px 14px;background:#fefce8;border:1.5px solid #fde047;border-radius:10px;text-align:center">
-            <p style="font-size:22px;font-weight:700;color:#ca8a04">${updates.length}</p>
-            <p style="font-size:11px;color:#854d0e;margin-top:2px">Existing (by phone)</p>
-          </div>
-          <div style="flex:1;min-width:100px;padding:12px 14px;background:#f0f9ff;border:1.5px solid #7dd3fc;border-radius:10px;text-align:center">
-            <p style="font-size:22px;font-weight:700;color:#0369a1">${allLeads.length}</p>
-            <p style="font-size:11px;color:#075985;margin-top:2px">Total rows</p>
-          </div>
+      <div class="mh"><h3 style="font-weight:700;font-size:15px">📂 Import Preview</h3>${mX()}</div>
+      <div class="mb">
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+          <div style="flex:1;min-width:80px;padding:11px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;text-align:center"><p style="font-size:20px;font-weight:700;color:#16a34a">${newL.length}</p><p style="font-size:11px;color:#166534">New leads</p></div>
+          <div style="flex:1;min-width:80px;padding:11px;background:#fefce8;border:1.5px solid #fde047;border-radius:10px;text-align:center"><p style="font-size:20px;font-weight:700;color:#ca8a04">${upd.length}</p><p style="font-size:11px;color:#854d0e">Match by phone</p></div>
+          <div style="flex:1;min-width:80px;padding:11px;background:#f0f9ff;border:1.5px solid #7dd3fc;border-radius:10px;text-align:center"><p style="font-size:20px;font-weight:700;color:#0369a1">${allLeads.length}</p><p style="font-size:11px;color:#075985">Total rows</p></div>
         </div>
-
-        <div class="form-group">
-          <label class="label">For existing leads (matched by phone)</label>
+        <div class="fg"><label class="label">For leads that already exist (matched by phone number)</label>
           <select class="input" id="imp-mode">
             <option value="skip">Skip existing — only add new leads</option>
-            <option value="update">Update existing — overwrite with file data</option>
+            <option value="update">Update existing — overwrite all fields from file</option>
             <option value="both">Both — add new + update existing</option>
           </select>
         </div>
-
-        <div class="form-group">
-          <label class="label">Detected columns from your file</label>
-          <div style="display:flex;flex-wrap:wrap;gap:5px;padding:10px;background:var(--surface);border-radius:8px;border:1.5px solid var(--border)">
-            ${Object.entries(m).map(([field,idx])=>`<span style="padding:3px 8px;background:var(--accent-dim);color:var(--accent-d);border-radius:999px;font-size:10px;font-weight:600">${field} ← col${idx+1}:${headers[idx]}</span>`).join("")}
-            ${Object.keys(m).length===0?`<span style="color:var(--muted);font-size:12px">⚠️ Could not detect columns. Check your header row names.</span>`:""}
+        <div class="fg">
+          <label class="label">Detected columns (${detectedFields.length} of ${headers.length} mapped)</label>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;padding:9px;background:var(--surface);border-radius:8px;border:1.5px solid var(--border)">
+            ${detectedFields.map(f=>`<span style="padding:2px 8px;background:var(--accent-dim);color:var(--accent-d);border-radius:999px;font-size:10px;font-weight:600">${f} ← "${headers[m[f]]}"</span>`).join("")}
+            ${detectedFields.length===0?`<span style="color:var(--muted);font-size:11px">⚠️ No columns matched. Ensure headers include Name, Phone, Email, etc.</span>`:""}
           </div>
         </div>
-
-        ${preview.length?`<div class="form-group">
-          <label class="label">Preview (first ${preview.length} rows)</label>
-          <div style="overflow-x:auto;border-radius:8px;border:1.5px solid var(--border)">
-          <table class="table" style="min-width:400px">
-            <thead><tr>${headers.slice(0,6).map(h=>`<th>${h}</th>`).join("")}${headers.length>6?`<th>+${headers.length-6} more</th>`:""}</tr></thead>
-            <tbody>${preview.map(r=>`<tr>${r.slice(0,6).map(v=>`<td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v||"—"}</td>`).join("")}${r.length>6?`<td style="font-size:10px;color:var(--muted)">...</td>`:""}</tr>`).join("")}</tbody>
-          </table></div></div>`:""}
-
-        ${!m.name||!m.phone?`<div style="padding:10px 12px;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:8px;margin-bottom:12px;font-size:12px;color:#991b1b">
-          ⚠️ <strong>Name</strong> or <strong>Phone</strong> column not detected. Make sure your header row has columns named Name and Phone.
-        </div>`:""}
-
+        ${!m.name||!m.phone?`<div style="padding:9px 12px;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:8px;margin-bottom:12px;font-size:12px;color:#991b1b">⚠️ <strong>Name</strong> or <strong>Phone</strong> column not detected. Check your header row.</div>`:""}
         <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-          <button class="btn btn-primary" onclick="doImport(${JSON.stringify(allLeads).replace(/'/g,"\\'")})" ${!m.name||!m.phone?"disabled":""}>
-            ✓ Import ${allLeads.length} Leads
-          </button>
+          <button class="btn btn-s btn-sm" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-p btn-sm" onclick="doImport()" ${!m.name||!m.phone?"disabled":""}>✓ Import ${allLeads.length} leads</button>
         </div>
-      </div>`, 600);
-
-    // Store import data globally to avoid passing huge JSON in onclick
-    window._importData = allLeads;
-  }catch(err){ toast("Parse error: "+err.message,"err"); }
+      </div>`,580);
+  }catch(err){toast("Parse error: "+err.message,"err");}
 }
 
-async function doImport(data){
-  // Use stored data if available (avoids HTML encoding issues)
-  const allLeads = window._importData || data;
+async function doImport(){
+  const all=window._imp||[];
   const mode=$("imp-mode")?.value||"skip";
-  const existing=new Map(S.leads.map(l=>[l.phone?.trim(),l]));
-
-  const toInsert=[], toUpdate=[];
-  allLeads.forEach(l=>{
-    const ph=l.phone?.trim();
-    if(existing.has(ph)){
-      if(mode==="update"||mode==="both") toUpdate.push({...existing.get(ph),...l,id:existing.get(ph).id,created_date:existing.get(ph).created_date});
-    } else {
-      if(mode==="skip"||mode==="both"||mode==="update") toInsert.push(l);
-    }
+  const existMap=new Map(S.leads.map(l=>[(l.phone||"").replace(/\D/g,""),l]));
+  const toIns=[],toUpd=[];
+  all.forEach(l=>{
+    const ph=l.phone.replace(/\D/g,"");
+    if(existMap.has(ph)){if(mode==="update"||mode==="both")toUpd.push({...l,id:existMap.get(ph).id,created_date:existMap.get(ph).created_date});}
+    else{toIns.push(l);}
   });
-  // If mode is "skip", toUpdate stays empty. If mode is "update", toInsert has non-existing only.
-
   try{
-    if(toInsert.length) await api.post("leads",toInsert);
-    for(const l of toUpdate){
+    if(toIns.length)await api.post("leads",toIns);
+    // Batch update: patch each individually (Supabase REST supports in() for patch too)
+    for(const l of toUpd){
       await api.patch("leads",l,`id=eq.${l.id}`);
       S.leads=S.leads.map(x=>x.id===l.id?l:x);
     }
-    if(toInsert.length){ S.leads=[...toInsert,...S.leads]; }
-    setCount(); toast(`✅ Imported ${toInsert.length} new, updated ${toUpdate.length}`); closeModal(); render();
-  }catch(err){ toast("Import failed: "+err.message,"err"); }
+    if(toIns.length)S.leads=[...toIns,...S.leads];
+    setCount();toast(`✅ Added ${toIns.length} new · Updated ${toUpd.length}`);closeModal();render();
+  }catch(err){toast("Import failed: "+err.message,"err");}
+}
+
+function parseFile(file){
+  return new Promise((res,rej)=>{
+    const ext=file.name.split(".").pop().toLowerCase();
+    if(ext==="csv"||ext==="txt"){
+      const r=new FileReader();
+      r.onload=ev=>{
+        try{
+          const lines=ev.target.result.split(/\r?\n/).filter(l=>l.trim());
+          if(!lines.length){rej(new Error("Empty file"));return;}
+          const headers=lines[0].split(",").map(h=>h.replace(/^"|"$/g,"").trim());
+          const rows=lines.slice(1).map(l=>{
+            const vals=[];let cur="",inQ=false;
+            for(let i=0;i<l.length;i++){const c=l[i];if(c==='"'){inQ=!inQ;}else if(c===","&&!inQ){vals.push(cur.trim());cur="";}else cur+=c;}
+            vals.push(cur.trim());
+            return vals.map(v=>v.replace(/^"|"$/g,""));
+          });
+          res({headers,rows});
+        }catch(e){rej(e);}
+      };
+      r.onerror=()=>rej(new Error("Read failed"));r.readAsText(file);
+    }else if(["xlsx","xls","ods"].includes(ext)){
+      const r=new FileReader();
+      r.onload=ev=>{
+        try{
+          const wb=XLSX.read(ev.target.result,{type:"binary"});
+          const ws=wb.Sheets[wb.SheetNames[0]];
+          const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+          if(!data.length){rej(new Error("Empty sheet"));return;}
+          res({headers:data[0].map(h=>String(h).trim()),rows:data.slice(1).map(r=>r.map(v=>String(v).trim()))});
+        }catch(e){rej(e);}
+      };
+      r.onerror=()=>rej(new Error("Read failed"));r.readAsBinaryString(file);
+    }else{rej(new Error("Unsupported file. Use CSV, XLS or XLSX."));}
+  });
 }
 
 // ── LEAD FORM ─────────────────────────────────────────────────────────────────
-function openLeadForm(id){
+function openLF(id){
   const l=id?S.leads.find(x=>x.id===id):null;
   modal(`
-    <div class="modal-header">
-      <h3 style="font-weight:700;font-size:15px;color:var(--text)">${l?"✏️ Edit Lead":"➕ Add New Lead"}</h3>
-      ${mClose()}
-    </div>
-    <div class="modal-body">
-      <div class="grid2">
-        <div class="form-group"><label class="label">Full Name *</label><input class="input" id="lf-name" value="${l?.name||""}" placeholder="Name"></div>
-        <div class="form-group"><label class="label">Phone *</label><input class="input" id="lf-phone" value="${l?.phone||""}" placeholder="9876543210"></div>
-        <div class="form-group"><label class="label">Email</label><input class="input" id="lf-email" value="${l?.email||""}" placeholder="email@example.com"></div>
-        <div class="form-group"><label class="label">Website</label><input class="input" id="lf-website" value="${l?.website||""}" placeholder="domain.com"></div>
-        <div class="form-group" style="grid-column:1/-1"><label class="label">Address</label><input class="input" id="lf-address" value="${l?.address||""}" placeholder="Area, City"></div>
-        <div class="form-group"><label class="label">Status</label>
-          <select class="input" id="lf-status">${STATUSES.map(s=>`<option ${(l?.status||"New")===s?"selected":""}>${s}</option>`).join("")}</select></div>
-        <div class="form-group"><label class="label">Category</label>
-          <select class="input" id="lf-cat">${S.categories.map(c=>`<option ${l?.category===c?"selected":""}>${c}</option>`).join("")}</select></div>
-        <div class="form-group"><label class="label">Area</label><input class="input" id="lf-area" value="${l?.area||""}" placeholder="Bopal, Satellite..."></div>
-        <div class="form-group"><label class="label">Follow Up Date</label><input type="date" class="input" id="lf-fu" value="${l?.follow_up_date||""}"></div>
-        <div class="form-group" style="grid-column:1/-1"><label class="label">Notes</label>
-          <textarea class="input" id="lf-notes" rows="3" style="resize:vertical" placeholder="Requirements, budget...">${l?.notes||""}</textarea></div>
+    <div class="mh"><h3 style="font-weight:700;font-size:15px">${l?"✏️ Edit Lead":"➕ New Lead"}</h3>${mX()}</div>
+    <div class="mb">
+      <div class="g2">
+        <div class="fg"><label class="label">Full Name *</label><input class="input" id="lf-name" value="${l?.name||""}" placeholder="Name"></div>
+        <div class="fg"><label class="label">Phone *</label><input class="input" id="lf-phone" value="${l?.phone||""}" placeholder="9876543210"></div>
+        <div class="fg"><label class="label">Email</label><input class="input" id="lf-email" value="${l?.email||""}" placeholder="email@example.com"></div>
+        <div class="fg"><label class="label">Website</label><input class="input" id="lf-website" value="${l?.website||""}" placeholder="domain.com"></div>
+        <div class="fg" style="grid-column:1/-1"><label class="label">Address</label><input class="input" id="lf-addr" value="${l?.address||""}" placeholder="Full address"></div>
+        <div class="fg"><label class="label">Status</label><select class="input" id="lf-status">${STATUSES.map(s=>`<option ${(l?.status||"New")===s?"selected":""}>${s}</option>`).join("")}</select></div>
+        <div class="fg"><label class="label">Category</label><select class="input" id="lf-cat">${S.categories.map(c=>`<option ${l?.category===c?"selected":""}>${c}</option>`).join("")}</select></div>
+        <div class="fg"><label class="label">Area</label><input class="input" id="lf-area" value="${l?.area||""}" placeholder="Bopal, Satellite..."></div>
+        <div class="fg"><label class="label">Follow Up Date</label><input type="date" class="input" id="lf-fu" value="${l?.follow_up_date||""}"></div>
+        <div class="fg" style="grid-column:1/-1"><label class="label">Notes</label><textarea class="input" id="lf-notes" rows="3" style="resize:vertical">${l?.notes||""}</textarea></div>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveLeadForm('${id||""}')">✓ ${l?"Update":"Add"} Lead</button>
+        <button class="btn btn-s" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-p" onclick="saveLF('${id||""}')">✓ ${l?"Update":"Add"} Lead</button>
       </div>
     </div>`);
 }
 
-async function saveLeadForm(id){
+async function saveLF(id){
   const g=i=>$(i)?.value||"";
-  const data={name:g("lf-name"),phone:g("lf-phone"),email:g("lf-email"),website:g("lf-website"),address:g("lf-address"),status:g("lf-status"),category:g("lf-cat"),area:g("lf-area"),follow_up_date:g("lf-fu"),notes:g("lf-notes")};
+  const data={name:g("lf-name"),phone:g("lf-phone"),email:g("lf-email"),website:g("lf-website"),address:g("lf-addr"),status:g("lf-status"),category:g("lf-cat"),area:g("lf-area"),follow_up_date:g("lf-fu"),notes:g("lf-notes")};
   if(!data.name||!data.phone){toast("Name and phone required","err");return;}
   try{
-    if(id){ await api.patch("leads",data,`id=eq.${id}`); S.leads=S.leads.map(l=>l.id===id?{...l,...data}:l); toast("Lead updated!"); }
-    else{ const n={...data,id:Date.now().toString(),created_date:today()}; await api.post("leads",n); S.leads=[n,...S.leads]; toast("Lead added!"); }
-    setCount(); closeModal(); render();
-  }catch(e){ toast("Error: "+e.message,"err"); }
+    if(id){await api.patch("leads",data,`id=eq.${id}`);S.leads=S.leads.map(l=>l.id===id?{...l,...data}:l);toast("Lead updated!");}
+    else{const n={...data,id:Date.now().toString(),created_date:today()};await api.post("leads",n);S.leads=[n,...S.leads];toast("Lead added!");}
+    setCount();closeModal();render();
+  }catch(e){toast("Error: "+e.message,"err");}
 }
 
-// ── BULK UPDATE MODAL ─────────────────────────────────────────────────────────
-function openBulkModal(){
+// ── BULK UPDATE ───────────────────────────────────────────────────────────────
+function openBulk(){
   modal(`
-    <div class="modal-header">
-      <h3 style="font-weight:700;font-size:15px;color:var(--text)">📝 Bulk Update ${S.sel.size} Leads</h3>
-      ${mClose()}
-    </div>
-    <div class="modal-body" style="max-width:400px">
-      <div class="form-group"><label class="label">Field to update</label>
-        <select class="input" id="bk-f" onchange="refreshBulkOpts()">
+    <div class="mh"><h3 style="font-weight:700;font-size:15px">📝 Update ${S.sel.size} Leads</h3>${mX()}</div>
+    <div class="mb" style="max-width:420px">
+      <div class="fg"><label class="label">Field to update</label>
+        <select class="input" id="bk-f" onchange="refreshBulk()">
           <option value="status">Status</option>
           <option value="category">Category</option>
-          <option value="area">Area</option>
-        </select></div>
-      <div class="form-group" id="bk-val-wrap"><label class="label">New Value</label>
+          <option value="area">Area (free text)</option>
+          <option value="follow_up_date">Follow Up Date</option>
+          <option value="last_contacted">Last Contacted Date</option>
+        </select>
+      </div>
+      <div id="bk-vw" class="fg">
+        <label class="label">New Value</label>
         <select class="input" id="bk-v"><option value="">— Select —</option>${STATUSES.map(s=>`<option>${s}</option>`).join("")}</select>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="doBulk()">Update ${S.sel.size} Leads</button>
+        <button class="btn btn-s" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-p" onclick="doBulk()">Update ${S.sel.size} Leads</button>
       </div>
-    </div>`,400);
+    </div>`,420);
 }
 
-function refreshBulkOpts(){
-  const f=$("bk-f")?.value, w=$("bk-val-wrap"); if(!w) return;
-  if(f==="area"){
-    w.innerHTML=`<label class="label">New Area</label><input class="input" id="bk-v" placeholder="e.g. Bopal">`;
-  } else {
-    const opts=f==="status"?STATUSES:S.categories;
-    w.innerHTML=`<label class="label">New Value</label><select class="input" id="bk-v"><option value="">— Select —</option>${opts.map(v=>`<option>${v}</option>`).join("")}</select>`;
+function refreshBulk(){
+  const f=$("bk-f")?.value,w=$("bk-vw");if(!w)return;
+  if(f==="status"){
+    w.innerHTML=`<label class="label">New Status</label><select class="input" id="bk-v"><option value="">— Select —</option>${STATUSES.map(s=>`<option>${s}</option>`).join("")}</select>`;
+  }else if(f==="category"){
+    w.innerHTML=`<label class="label">New Category</label><select class="input" id="bk-v"><option value="">— Select —</option>${S.categories.map(c=>`<option>${c}</option>`).join("")}</select>`;
+  }else if(f==="follow_up_date"||f==="last_contacted"){
+    w.innerHTML=`<label class="label">Date</label><input type="date" class="input" id="bk-v">`;
+  }else{
+    w.innerHTML=`<label class="label">New Value</label><input class="input" id="bk-v" placeholder="Enter value...">`;
   }
 }
 
 async function doBulk(){
-  const field=$("bk-f")?.value, val=$("bk-v")?.value;
+  const field=$("bk-f")?.value,val=$("bk-v")?.value;
   if(!val){toast("Enter a value","err");return;}
   const ids=[...S.sel];
   try{
     await api.patch("leads",{[field]:val},`id=in.(${ids.join(",")})`);
     S.leads=S.leads.map(l=>S.sel.has(l.id)?{...l,[field]:val}:l);
-    toast(`${ids.length} leads updated`); S.sel.clear(); closeModal(); render();
-  }catch(e){ toast("Error: "+e.message,"err"); }
+    toast(`${ids.length} leads updated`);S.sel.clear();closeModal();render();
+  }catch(e){toast("Error: "+e.message,"err");}
 }
 
 // ── WHATSAPP ──────────────────────────────────────────────────────────────────
-function openWpModal(id){
-  const l=S.leads.find(x=>x.id===id); if(!l) return;
+function openWA(id){
+  const l=S.leads.find(x=>x.id===id);if(!l)return;
   modal(`
-    <div class="modal-header">
-      <h3 style="font-weight:700;font-size:15px;color:var(--text)">💬 Send WhatsApp</h3>
-      ${mClose()}
-    </div>
-    <div class="modal-body">
-      <div style="margin-bottom:14px;padding:12px;background:var(--surface);border-radius:10px;border:1.5px solid var(--border);display:flex;align-items:center;gap:10px">
-        <div style="width:38px;height:38px;border-radius:50%;background:#25D36620;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px">💬</div>
-        <div><p style="font-weight:600;font-size:13px;color:var(--text)">${l.name}</p><p style="font-size:11px;color:var(--muted);font-family:monospace">+91 ${l.phone}</p></div>
+    <div class="mh"><h3 style="font-weight:700;font-size:15px">💬 WhatsApp — ${l.name}</h3>${mX()}</div>
+    <div class="mb">
+      <div style="margin-bottom:12px;padding:10px 12px;background:var(--surface);border-radius:9px;border:1.5px solid var(--border);display:flex;align-items:center;gap:8px">
+        <span style="font-size:22px">💬</span>
+        <div><p style="font-weight:600;font-size:13px">${l.name}</p><p style="font-size:11px;color:var(--muted);font-family:monospace">+91 ${l.phone}</p></div>
       </div>
-      <div class="form-group"><label class="label">Template (optional)</label>
+      <div class="fg"><label class="label">Template (optional)</label>
         <select class="input" onchange="applyTpl(this.value,'${id}')">
           <option value="">— Pick a template —</option>
           ${S.templates.map(t=>`<option value="${t.id}">${t.name}</option>`).join("")}
-        </select></div>
-      <div class="form-group">
+        </select>
+      </div>
+      <div class="fg">
         <label class="label">Message</label>
-        <textarea class="input" id="wp-msg" rows="5" style="resize:vertical" placeholder="Type your message..."></textarea>
-        <p style="font-size:10px;color:var(--muted);margin-top:3px" id="wp-cc">0 chars</p>
+        <textarea class="input" id="wp-m" rows="5" style="resize:vertical" placeholder="Type your message..."></textarea>
+        <p style="font-size:10px;color:var(--muted);margin-top:3px" id="wp-c">0 chars</p>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-wa" onclick="sendWp('${id}')">📤 Open WhatsApp</button>
+        <button class="btn btn-s" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-wa" style="font-size:13px;padding:8px 14px" onclick="sendWA('${id}')">📤 Open WhatsApp</button>
       </div>
     </div>`,460);
-  $("wp-msg")?.addEventListener("input",function(){const e=$("wp-cc");if(e)e.textContent=this.value.length+" chars";});
+  $("wp-m")?.addEventListener("input",function(){const c=$("wp-c");if(c)c.textContent=this.value.length+" chars";});
 }
-
 function applyTpl(tid,lid){
-  if(!tid) return;
-  const t=S.templates.find(x=>x.id===tid), l=S.leads.find(x=>x.id===lid);
-  if(t&&l){const e=$("wp-msg");if(e){e.value=t.message.replace(/{name}/g,l.name);const c=$("wp-cc");if(c)c.textContent=e.value.length+" chars";}}
+  if(!tid)return;
+  const t=S.templates.find(x=>x.id===tid),l=S.leads.find(x=>x.id===lid);
+  if(t&&l){const e=$("wp-m");if(e){e.value=t.message.replace(/{name}/g,l.name);const c=$("wp-c");if(c)c.textContent=e.value.length+" chars";}}
 }
-
-async function sendWp(id){
-  const msg=$("wp-msg")?.value||""; if(!msg.trim()){toast("Enter a message","err");return;}
-  const l=S.leads.find(x=>x.id===id); if(!l) return;
+async function sendWA(id){
+  const msg=$("wp-m")?.value||"";if(!msg.trim()){toast("Enter a message","err");return;}
+  const l=S.leads.find(x=>x.id===id);if(!l)return;
   const ph=(l.phone||"").replace(/\D/g,"");
   window.open(`https://wa.me/${ph.length===10?"91"+ph:ph}?text=${encodeURIComponent(msg)}`,"_blank");
   const t=today();
-  try{ await api.patch("leads",{last_contacted:t},`id=eq.${id}`); S.leads=S.leads.map(l=>l.id===id?{...l,last_contacted:t}:l); }catch(e){}
-  closeModal(); toast("WhatsApp opened!"); render();
+  try{await api.patch("leads",{last_contacted:t},`id=eq.${id}`);S.leads=S.leads.map(l=>l.id===id?{...l,last_contacted:t}:l);}catch(e){}
+  closeModal();toast("WhatsApp opened!");render();
 }
 
 // ── TEMPLATES ─────────────────────────────────────────────────────────────────
 function renderTpls(){
-  return `<div class="fade" style="padding-top:8px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
-      <div><h1 style="font-size:22px;font-weight:700;color:var(--text)">Templates</h1><p style="color:var(--muted);font-size:12px">Saved WhatsApp messages with {name} personalization</p></div>
-      <button class="btn btn-primary btn-sm" onclick="openTplForm()">＋ New Template</button>
+  return `<div class="fade" style="padding-top:6px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;margin-top:30px">
+      <div><h1 class="page-title" style="font-size:21px;font-weight:700">Templates</h1><p style="color:var(--muted);font-size:12px">WA messages with {name} personalization</p></div>
+      <button class="btn btn-p btn-sm" onclick="openTF()">＋ New</button>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px">
-      ${S.templates.map(t=>`<div class="card" style="padding:16px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-          <div><p style="font-weight:600;font-size:13px;color:var(--text)">${t.name}</p><span style="font-size:10px;color:var(--muted)">${t.message.length} chars</span></div>
-          <div style="display:flex;gap:4px">
-            <button class="ab" title="Edit" onclick="openTplForm('${t.id}')">✏️</button>
-            <button class="ab" title="Delete" onclick="deleteTpl('${t.id}')">🗑</button>
-          </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:11px">
+      ${S.templates.map(t=>`<div class="card" style="padding:15px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:9px">
+          <div><p style="font-weight:600;font-size:13px">${t.name}</p><span style="font-size:10px;color:var(--muted)">${t.message.length} chars</span></div>
+          <div style="display:flex;gap:3px"><button class="ab" onclick="openTF('${t.id}')">✏️</button><button class="ab" onclick="delTpl('${t.id}')">🗑</button></div>
         </div>
-        <p style="font-size:12px;color:var(--muted);line-height:1.65;background:var(--surface);padding:10px 12px;border-radius:8px;border:1.5px solid var(--border)">${t.message}</p>
+        <p style="font-size:12px;color:var(--muted);line-height:1.65;background:var(--surface);padding:9px 11px;border-radius:7px;border:1.5px solid var(--border)">${t.message}</p>
       </div>`).join("")}
     </div>
   </div>`;
 }
-
-function openTplForm(id){
+function openTF(id){
   const t=id?S.templates.find(x=>x.id===id):null;
-  modal(`
-    <div class="modal-header">
-      <h3 style="font-weight:700;font-size:15px;color:var(--text)">${t?"✏️ Edit Template":"➕ New Template"}</h3>
-      ${mClose()}
-    </div>
-    <div class="modal-body">
-      <div class="form-group"><label class="label">Template Name</label><input class="input" id="tf-n" value="${t?.name||""}" placeholder="e.g. Initial Greeting"></div>
-      <div class="form-group">
-        <label class="label">Message · <span style="color:var(--accent)">Use {name} to personalize</span></label>
-        <textarea class="input" id="tf-m" rows="5" style="resize:vertical" placeholder="Hello {name}! ...">${t?.message||""}</textarea>
-      </div>
+  modal(`<div class="mh"><h3 style="font-weight:700;font-size:15px">${t?"✏️ Edit":"➕ New"} Template</h3>${mX()}</div>
+    <div class="mb">
+      <div class="fg"><label class="label">Name</label><input class="input" id="tf-n" value="${t?.name||""}" placeholder="e.g. Initial Greeting"></div>
+      <div class="fg"><label class="label">Message · <span style="color:var(--accent)">Use {name} to personalize</span></label>
+        <textarea class="input" id="tf-m" rows="5" style="resize:vertical">${t?.message||""}</textarea></div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveTpl('${id||""}')">✓ Save</button>
+        <button class="btn btn-s" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-p" onclick="saveTF('${id||""}')">✓ Save</button>
       </div>
     </div>`);
 }
-
-async function saveTpl(id){
-  const name=$("tf-n")?.value||"", message=$("tf-m")?.value||"";
+async function saveTF(id){
+  const name=$("tf-n")?.value||"",message=$("tf-m")?.value||"";
   if(!name||!message){toast("Fill all fields","err");return;}
   try{
-    if(id){ await api.patch("templates",{name,message},`id=eq.${id}`); S.templates=S.templates.map(t=>t.id===id?{...t,name,message}:t); toast("Updated!"); }
-    else{ const n={id:"t"+Date.now(),name,message}; await api.post("templates",n); S.templates=[...S.templates,n]; toast("Template added!"); }
-    closeModal(); render();
-  }catch(e){ toast("Error: "+e.message,"err"); }
+    if(id){await api.patch("templates",{name,message},`id=eq.${id}`);S.templates=S.templates.map(t=>t.id===id?{...t,name,message}:t);toast("Updated!");}
+    else{const n={id:"t"+Date.now(),name,message};await api.post("templates",n);S.templates=[...S.templates,n];toast("Added!");}
+    closeModal();render();
+  }catch(e){toast("Error: "+e.message,"err");}
+}
+async function delTpl(id){
+  if(!confirm("Delete?"))return;
+  try{await api.del("templates",`id=eq.${id}`);S.templates=S.templates.filter(t=>t.id!==id);toast("Deleted");render();}
+  catch(e){toast("Error","err");}
 }
 
-async function deleteTpl(id){
-  if(!confirm("Delete this template?")) return;
-  try{ await api.del("templates",`id=eq.${id}`); S.templates=S.templates.filter(t=>t.id!==id); toast("Deleted"); render(); }
-  catch(e){ toast("Error","err"); }
-}
-
-// ── CATEGORIES ─────────────────────────────────────────────────────────────────
+// ── CATEGORIES ────────────────────────────────────────────────────────────────
 function renderCats(){
-  return `<div class="fade" style="padding-top:8px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
-      <div><h1 style="font-size:22px;font-weight:700;color:var(--text)">Categories</h1><p style="color:var(--muted);font-size:12px">Organize and rename lead categories</p></div>
-      <button class="btn btn-primary btn-sm" onclick="openCatForm()">＋ Add Category</button>
+  return `<div class="fade" style="padding-top:6px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;margin-top:30px">
+      <div><h1 class="page-title" style="font-size:21px;font-weight:700">Categories</h1><p style="color:var(--muted);font-size:12px">Organize and rename lead categories</p></div>
+      <button class="btn btn-p btn-sm" onclick="openCF()">＋ Add</button>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:11px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px">
       ${S.categories.map(cat=>{
         const n=S.leads.filter(l=>l.category===cat).length;
-        return `<div class="card" style="padding:16px 18px">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-            <p style="font-weight:700;font-size:15px;color:var(--text)">${cat}</p>
-            <div style="display:flex;gap:3px">
-              <button class="ab" title="Rename" onclick="openRenameCat('${cat}')">✏️</button>
-              <button class="ab" title="Delete" onclick="deleteCat('${cat}')">🗑</button>
-            </div>
+        return `<div class="card" style="padding:15px 17px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+            <p style="font-weight:700;font-size:14px">${cat}</p>
+            <div style="display:flex;gap:2px"><button class="ab" onclick="openRC('${cat}')">✏️</button><button class="ab" onclick="delCat('${cat}')">🗑</button></div>
           </div>
           <p style="font-size:11px;color:var(--muted)">${n} lead${n!==1?"s":""}</p>
-          <p style="font-size:26px;font-weight:700;color:var(--accent);margin-top:6px;line-height:1">${n}</p>
+          <p style="font-size:24px;font-weight:700;color:var(--accent);line-height:1;margin-top:6px">${n}</p>
         </div>`;}).join("")}
     </div>
   </div>`;
 }
-
-function openCatForm(){
-  modal(`
-    <div class="modal-header">
-      <h3 style="font-weight:700;font-size:15px;color:var(--text)">➕ Add Category</h3>
-      ${mClose()}
-    </div>
-    <div class="modal-body" style="max-width:400px">
-      <div class="form-group"><label class="label">Category Name</label><input class="input" id="cat-n" placeholder="e.g. Luxury Residential"></div>
+function openCF(){
+  modal(`<div class="mh"><h3 style="font-weight:700;font-size:15px">➕ Add Category</h3>${mX()}</div>
+    <div class="mb" style="max-width:400px">
+      <div class="fg"><label class="label">Category Name</label><input class="input" id="cn" placeholder="e.g. Luxury Residential"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveCat()">Add</button>
+        <button class="btn btn-s" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-p" onclick="saveCat()">Add</button>
       </div>
     </div>`,400);
 }
-
 async function saveCat(){
-  const name=($("cat-n")?.value||"").trim();
+  const name=($("cn")?.value||"").trim();
   if(!name){toast("Enter a name","err");return;}
   if(S.categories.includes(name)){toast("Already exists","err");return;}
-  try{ await api.post("categories",{name}); S.categories=[...S.categories,name]; toast("Category added!"); closeModal(); render(); }
-  catch(e){ toast("Error: "+e.message,"err"); }
+  try{await api.post("categories",{name});S.categories=[...S.categories,name];toast("Added!");closeModal();render();}
+  catch(e){toast("Error: "+e.message,"err");}
 }
-
-function openRenameCat(oldName){
-  modal(`
-    <div class="modal-header">
-      <h3 style="font-weight:700;font-size:15px;color:var(--text)">✏️ Rename Category</h3>
-      ${mClose()}
-    </div>
-    <div class="modal-body" style="max-width:400px">
-      <div class="form-group">
-        <label class="label">Current name</label>
-        <input class="input" value="${oldName}" disabled style="opacity:.6">
-      </div>
-      <div class="form-group">
-        <label class="label">New name</label>
-        <input class="input" id="rename-n" value="${oldName}" placeholder="New category name">
-      </div>
-      <p style="font-size:11px;color:var(--muted);margin-bottom:14px">⚠️ All leads using <strong>${oldName}</strong> will be updated to the new name.</p>
+function openRC(old){
+  modal(`<div class="mh"><h3 style="font-weight:700;font-size:15px">✏️ Rename: ${old}</h3>${mX()}</div>
+    <div class="mb" style="max-width:400px">
+      <div class="fg"><label class="label">New Name</label><input class="input" id="rn" value="${old}"></div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:12px">⚠️ All leads in <strong>${old}</strong> will be updated.</p>
       <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="renameCat('${oldName}')">✓ Rename</button>
+        <button class="btn btn-s" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-p" onclick="renameCat('${old}')">✓ Rename</button>
       </div>
     </div>`,400);
 }
-
-async function renameCat(oldName){
-  const newName=($("rename-n")?.value||"").trim();
-  if(!newName||newName===oldName){toast("Enter a different name","err");return;}
-  if(S.categories.includes(newName)){toast("Name already exists","err");return;}
+async function renameCat(old){
+  const n=($("rn")?.value||"").trim();
+  if(!n||n===old){toast("Enter a different name","err");return;}
+  if(S.categories.includes(n)){toast("Name already exists","err");return;}
   try{
-    // Insert new, update leads, delete old
-    await api.post("categories",{name:newName});
-    await api.patch("leads",{category:newName},`category=eq.${encodeURIComponent(oldName)}`);
-    await api.del("categories",`name=eq.${encodeURIComponent(oldName)}`);
-    S.categories=S.categories.map(c=>c===oldName?newName:c);
-    S.leads=S.leads.map(l=>l.category===oldName?{...l,category:newName}:l);
-    toast(`Renamed to "${newName}"`); closeModal(); render();
-  }catch(e){ toast("Error: "+e.message,"err"); }
+    await api.post("categories",{name:n});
+    await api.patch("leads",{category:n},`category=eq.${encodeURIComponent(old)}`);
+    await api.del("categories",`name=eq.${encodeURIComponent(old)}`);
+    S.categories=S.categories.map(c=>c===old?n:c);
+    S.leads=S.leads.map(l=>l.category===old?{...l,category:n}:l);
+    toast(`Renamed to "${n}"`);closeModal();render();
+  }catch(e){toast("Error: "+e.message,"err");}
 }
-
-async function deleteCat(cat){
+async function delCat(cat){
   const n=S.leads.filter(l=>l.category===cat).length;
-  if(n>0){toast(`Can't delete: ${n} leads use this category`,"err");return;}
-  if(!confirm(`Delete "${cat}"?`)) return;
-  try{ await api.del("categories",`name=eq.${encodeURIComponent(cat)}`); S.categories=S.categories.filter(c=>c!==cat); toast("Deleted"); render(); }
-  catch(e){ toast("Error","err"); }
+  if(n>0){toast(`Can't delete: ${n} leads use this`,"err");return;}
+  if(!confirm(`Delete "${cat}"?`))return;
+  try{await api.del("categories",`name=eq.${encodeURIComponent(cat)}`);S.categories=S.categories.filter(c=>c!==cat);toast("Deleted");render();}
+  catch(e){toast("Error","err");}
 }
 
-// ── START ─────────────────────────────────────────────────────────────────────
+// ── GO ────────────────────────────────────────────────────────────────────────
 init();
 </script>
 </body>
