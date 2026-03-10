@@ -203,6 +203,39 @@ const DEF_C=["Residential","Commercial","Investment","Rental","Industrial"];
 // ── UTILS ────────────────────────────────────────────────────────────────────
 const $=id=>document.getElementById(id);
 const today=()=>new Date().toISOString().split("T")[0];
+
+// ── PHONE NORMALIZER ─────────────────────────────────────────────────────────
+// Strips +91, country code, leading 0, spaces, dashes → stores last 10 digits only
+function cleanPhone(raw){
+  if(!raw)return"";
+  let d=String(raw).replace(/[\s\-\(\)\.]/g,""); // remove spaces, dashes, brackets, dots
+  d=d.replace(/^\+91/,"");   // strip +91 prefix
+  d=d.replace(/^91(?=\d{10}$)/,"");  // strip 91 if followed by exactly 10 digits
+  d=d.replace(/^0/,"");      // strip leading 0
+  d=d.replace(/\D/g,"");     // remove any remaining non-digits
+  return d.slice(-10);       // keep last 10 digits only
+}
+
+// Display phone with +91 prefix
+function dispPhone(p){return p?`+91 ${cleanPhone(p)}`:"";}
+
+// ── WEBSITE NORMALIZER ───────────────────────────────────────────────────────
+// Strips http://, https://, www. — stores clean domain only (e.g. example.com)
+function cleanWebsite(raw){
+  if(!raw)return"";
+  return String(raw)
+    .trim()
+    .replace(/^https?:\/\//i,"")   // strip http:// or https://
+    .replace(/^www\./i,"")          // strip www.
+    .replace(/\/$/,"");             // strip trailing slash
+}
+
+// Build full URL for opening
+function webURL(w){
+  const d=cleanWebsite(w);
+  return d?`https://www.${d}`:"";
+}
+
 let _t;
 function toast(msg,type="ok"){
   const e=$("toast");
@@ -341,10 +374,10 @@ function renderLeads(){
       <td><input type="checkbox" ${sel?"checked":""} onchange="toggleOne('${l.id}',this.checked)" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px"></td>
       <td><div style="font-weight:600">${l.name}</div>${l.email?`<div style="font-size:10px;color:var(--muted)">${l.email}</div>`:""}</td>
       <td>
-        <div style="font-family:monospace;color:var(--muted);font-size:11px;margin-bottom:4px">${l.phone}</div>
+        <div style="font-family:monospace;color:var(--muted);font-size:11px;margin-bottom:4px">+91 ${l.phone}</div>
         <div style="display:flex;gap:4px">
           <button class="btn-wa" onclick="openWA('${l.id}')">💬 WA</button>
-          <button class="btn-call" onclick="window.open('tel:${l.phone}')">📞</button>
+          <button class="btn-call" onclick="window.open('tel:+91${l.phone}')">📞</button>
         </div>
       </td>
       <td>${badge(l.status)}</td>
@@ -355,7 +388,7 @@ function renderLeads(){
       <td style="color:var(--muted);font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(l.notes||"").replace(/"/g,"'")}">${l.notes||"—"}</td>
       <td><div style="display:flex;gap:1px;flex-wrap:nowrap">
         ${l.email?`<button class="ab" title="Email" onclick="window.open('mailto:${l.email}')">📧</button>`:""}
-        ${l.website?`<button class="ab" title="Website" onclick="window.open('https://${l.website}','_blank')">🌐</button>`:""}
+        ${l.website?`<button class="ab" title="Website: www.${l.website}" onclick="window.open('${webURL(l.website)}','_blank')">🌐</button>`:""}
         <button class="ab" title="Edit" onclick="openLF('${l.id}')">✏️</button>
         <button class="ab" title="Delete" onclick="delLead('${l.id}')">🗑</button>
       </div></td>
@@ -373,9 +406,9 @@ function renderLeads(){
             <span style="font-weight:700;font-size:14px;color:var(--text)">${l.name}</span>
           </div>
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <span style="font-family:monospace;font-size:12px;color:var(--muted)">${l.phone}</span>
+            <span style="font-family:monospace;font-size:12px;color:var(--muted)">+91 ${l.phone}</span>
             <button class="btn-wa" onclick="openWA('${l.id}')">💬 WA</button>
-            <button class="btn-call" onclick="window.open('tel:${l.phone}')">📞 Call</button>
+            <button class="btn-call" onclick="window.open('tel:+91${l.phone}')">📞 Call</button>
           </div>
         </div>
         <div style="display:flex;gap:3px;flex-shrink:0;margin-left:8px">
@@ -388,7 +421,7 @@ function renderLeads(){
         <div><span style="color:var(--muted)">Category: </span><strong>${l.category||"—"}</strong></div>
         <div><span style="color:var(--muted)">Area: </span><strong>${l.area||"—"}</strong></div>
         ${l.email?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Email: </span><a href="mailto:${l.email}" style="color:var(--blue);text-decoration:none">${l.email}</a></div>`:""}
-        ${l.website?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Web: </span><a href="https://${l.website}" target="_blank" style="color:var(--blue);text-decoration:none">${l.website}</a></div>`:""}
+        ${l.website?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Web: </span><a href="${webURL(l.website)}" target="_blank" style="color:var(--blue);text-decoration:none">www.${l.website}</a></div>`:""}
         ${l.address?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Address: </span><strong>${l.address}</strong></div>`:""}
         ${l.follow_up_date?`<div><span style="color:var(--muted)">Follow-up: </span><strong style="color:${od?"#ef4444":"#f59e0b"}">${l.follow_up_date}</strong></div>`:""}
         ${l.last_contacted?`<div><span style="color:var(--muted)">Last contact: </span><strong>${l.last_contacted}</strong></div>`:""}
@@ -404,7 +437,7 @@ function renderLeads(){
         <p style="color:var(--muted);font-size:11px">${total} leads${f.search||f.status!=="all"||f.category!=="all"?" (filtered)":""} · showing ${f.showAll?"all":PER+"/page"}</p>
       </div>
       <div class="actions" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-        <label class="btn btn-s btn-sm" style="cursor:pointer">📂 Import <input type="file" accept=".csv,.xls,.xlsx,.ods" onchange="openImport(event)" style="display:none"></label>
+        <label class="btn btn-s btn-sm" style="cursor:pointer">📂 Import <input type="file" accept=".csv,.xls,.xlsx,.ods,.numbers" onchange="openImport(event)" style="display:none"></label>
         <button class="btn btn-s btn-sm" onclick="exportCSV()">⬇ Export</button>
         <button class="btn btn-p btn-sm" onclick="openLF()">＋ Add Lead</button>
       </div>
@@ -495,9 +528,15 @@ async function bulkDel(){
 function exportCSV(){
   const rows=filtL();
   const h=["Name","Phone","Email","Website","Address","Area","Status","Category","Follow Up","Last Contacted","Notes"];
-  const csv=[h.join(","),...rows.map(l=>[l.name,l.phone,l.email,l.website,l.address,l.area,l.status,l.category,l.follow_up_date,l.last_contacted,l.notes].map(v=>`"${(v||"").replace(/"/g,'""')}"`).join(","))].join("\n");
+  const csv=[h.join(","),...rows.map(l=>[
+    l.name,
+    cleanPhone(l.phone),
+    l.email,
+    cleanWebsite(l.website),
+    l.address,l.area,l.status,l.category,l.follow_up_date,l.last_contacted,l.notes
+  ].map(v=>`"${(v||"").replace(/"/g,'""')}"`).join(","))].join("\n");
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="nosh7_leads.csv";a.click();
-  toast("CSV exported!");
+  toast("CSV exported — phone as 10-digit, website as domain only!");
 }
 
 // ── IMPORT ────────────────────────────────────────────────────────────────────
@@ -524,7 +563,10 @@ function rowToLead(vals,m){
   const g=k=>m[k]!==undefined?(vals[m[k]]||"").toString().trim():"";
   return {
     id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),
-    name:g("name"),phone:g("phone"),email:g("email"),website:g("website"),
+    name:g("name"),
+    phone:cleanPhone(g("phone")),
+    email:g("email"),
+    website:cleanWebsite(g("website")),
     address:g("address"),area:g("area"),category:g("category")||S.categories[0]||"",
     status:STATUSES.includes(g("status"))?g("status"):"New",
     notes:g("notes"),follow_up_date:g("follow_up_date"),last_contacted:g("last_contacted"),
@@ -573,16 +615,33 @@ async function openImport(e){
           <button class="btn btn-p btn-sm" onclick="doImport()" ${!m.name||!m.phone?"disabled":""}>✓ Import ${allLeads.length} leads</button>
         </div>
       </div>`,580);
-  }catch(err){toast("Parse error: "+err.message,"err");}
+  }catch(err){
+    const msg=err.message;
+    if(msg.includes("Numbers")){
+      modal(`<div class="mh"><h3 style="font-weight:700;font-size:15px">📱 Apple Numbers File</h3>${mX()}</div>
+        <div class="mb">
+          <div style="padding:16px;background:#fefce8;border:1.5px solid #fde047;border-radius:10px;margin-bottom:14px">
+            <p style="font-weight:600;font-size:13px;color:#854d0e;margin-bottom:8px">⚠️ .numbers files can't be read in the browser</p>
+            <p style="font-size:12px;color:#78350f;line-height:1.7">Apple Numbers uses a proprietary format that requires conversion first.<br><strong>Quick fix in 2 steps:</strong></p>
+            <ol style="font-size:12px;color:#78350f;margin:8px 0 0 18px;line-height:2">
+              <li>Open your file in Numbers</li>
+              <li>Go to <strong>File → Export To → Excel (.xlsx)</strong></li>
+              <li>Import the exported .xlsx here</li>
+            </ol>
+          </div>
+          <div style="display:flex;justify-content:flex-end"><button class="btn btn-p btn-sm" onclick="closeModal()">Got it</button></div>
+        </div>`,420);
+    }else{toast("Parse error: "+msg,"err");}
+  }
 }
 
 async function doImport(){
   const all=window._imp||[];
   const mode=$("imp-mode")?.value||"skip";
-  const existMap=new Map(S.leads.map(l=>[(l.phone||"").replace(/\D/g,""),l]));
+  const existMap=new Map(S.leads.map(l=>[cleanPhone(l.phone),l]));
   const toIns=[],toUpd=[];
   all.forEach(l=>{
-    const ph=l.phone.replace(/\D/g,"");
+    const ph=cleanPhone(l.phone);
     if(existMap.has(ph)){if(mode==="update"||mode==="both")toUpd.push({...l,id:existMap.get(ph).id,created_date:existMap.get(ph).created_date});}
     else{toIns.push(l);}
   });
@@ -601,6 +660,17 @@ async function doImport(){
 function parseFile(file){
   return new Promise((res,rej)=>{
     const ext=file.name.split(".").pop().toLowerCase();
+    if(ext==="numbers"){
+      // Apple Numbers is a proprietary zip format not directly parseable in browsers.
+      // Guide user to export first.
+      rej(new Error(
+        "Apple Numbers (.numbers) cannot be parsed directly in a browser.\n\n"+
+        "Quick fix — export from Numbers first:\n"+
+        "File → Export To → Excel (.xlsx)\n"+
+        "Then re-import the .xlsx file here."
+      ));
+      return;
+    }
     if(ext==="csv"||ext==="txt"){
       const r=new FileReader();
       r.onload=ev=>{
@@ -630,7 +700,7 @@ function parseFile(file){
         }catch(e){rej(e);}
       };
       r.onerror=()=>rej(new Error("Read failed"));r.readAsBinaryString(file);
-    }else{rej(new Error("Unsupported file. Use CSV, XLS or XLSX."));}
+    }else{rej(new Error("Unsupported file. Use CSV, XLS, XLSX, or ODS. For Apple Numbers: File → Export To → Excel."));}
   });
 }
 
@@ -642,9 +712,9 @@ function openLF(id){
     <div class="mb">
       <div class="g2">
         <div class="fg"><label class="label">Full Name *</label><input class="input" id="lf-name" value="${l?.name||""}" placeholder="Name"></div>
-        <div class="fg"><label class="label">Phone *</label><input class="input" id="lf-phone" value="${l?.phone||""}" placeholder="9876543210"></div>
+        <div class="fg"><label class="label">Phone * <span style="color:var(--muted);font-weight:400">(any format — +91, 0, or 10-digit)</span></label><input class="input" id="lf-phone" value="${l?.phone?`+91 ${l.phone}`:""}" placeholder="9876543210 or +91..."></div>
         <div class="fg"><label class="label">Email</label><input class="input" id="lf-email" value="${l?.email||""}" placeholder="email@example.com"></div>
-        <div class="fg"><label class="label">Website</label><input class="input" id="lf-website" value="${l?.website||""}" placeholder="domain.com"></div>
+        <div class="fg"><label class="label">Website <span style="color:var(--muted);font-weight:400">(domain only e.g. business.com or business.in)</span></label><input class="input" id="lf-website" value="${cleanWebsite(l?.website||"")}" placeholder="e.g. nosh7.in or nosh7.com"></div>
         <div class="fg" style="grid-column:1/-1"><label class="label">Address</label><input class="input" id="lf-addr" value="${l?.address||""}" placeholder="Full address"></div>
         <div class="fg"><label class="label">Status</label><select class="input" id="lf-status">${STATUSES.map(s=>`<option ${(l?.status||"New")===s?"selected":""}>${s}</option>`).join("")}</select></div>
         <div class="fg"><label class="label">Category</label><select class="input" id="lf-cat">${S.categories.map(c=>`<option ${l?.category===c?"selected":""}>${c}</option>`).join("")}</select></div>
@@ -661,7 +731,15 @@ function openLF(id){
 
 async function saveLF(id){
   const g=i=>$(i)?.value||"";
-  const data={name:g("lf-name"),phone:g("lf-phone"),email:g("lf-email"),website:g("lf-website"),address:g("lf-addr"),status:g("lf-status"),category:g("lf-cat"),area:g("lf-area"),follow_up_date:g("lf-fu"),notes:g("lf-notes")};
+  const rawPhone=g("lf-phone"), rawWeb=g("lf-website");
+  const data={
+    name:g("lf-name"),
+    phone:cleanPhone(rawPhone),
+    email:g("lf-email"),
+    website:cleanWebsite(rawWeb),
+    address:g("lf-addr"),status:g("lf-status"),category:g("lf-cat"),
+    area:g("lf-area"),follow_up_date:g("lf-fu"),notes:g("lf-notes")
+  };
   if(!data.name||!data.phone){toast("Name and phone required","err");return;}
   try{
     if(id){await api.patch("leads",data,`id=eq.${id}`);S.leads=S.leads.map(l=>l.id===id?{...l,...data}:l);toast("Lead updated!");}
@@ -727,7 +805,7 @@ function openWA(id){
     <div class="mb">
       <div style="margin-bottom:12px;padding:10px 12px;background:var(--surface);border-radius:9px;border:1.5px solid var(--border);display:flex;align-items:center;gap:8px">
         <span style="font-size:22px">💬</span>
-        <div><p style="font-weight:600;font-size:13px">${l.name}</p><p style="font-size:11px;color:var(--muted);font-family:monospace">+91 ${l.phone}</p></div>
+        <div><p style="font-weight:600;font-size:13px">${l.name}</p><p style="font-size:11px;color:var(--muted);font-family:monospace">+91 ${cleanPhone(l.phone)}</p></div>
       </div>
       <div class="fg"><label class="label">Template (optional)</label>
         <select class="input" onchange="applyTpl(this.value,'${id}')">
@@ -755,8 +833,8 @@ function applyTpl(tid,lid){
 async function sendWA(id){
   const msg=$("wp-m")?.value||"";if(!msg.trim()){toast("Enter a message","err");return;}
   const l=S.leads.find(x=>x.id===id);if(!l)return;
-  const ph=(l.phone||"").replace(/\D/g,"");
-  window.open(`https://wa.me/${ph.length===10?"91"+ph:ph}?text=${encodeURIComponent(msg)}`,"_blank");
+  const ph=cleanPhone(l.phone);
+  window.open(`https://wa.me/91${ph}?text=${encodeURIComponent(msg)}`,"_blank");
   const t=today();
   try{await api.patch("leads",{last_contacted:t},`id=eq.${id}`);S.leads=S.leads.map(l=>l.id===id?{...l,last_contacted:t}:l);}catch(e){}
   closeModal();toast("WhatsApp opened!");render();
