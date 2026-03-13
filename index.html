@@ -4,6 +4,8 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>NOSH7 CRM</title>
+<link rel="icon" type="image/png" href="icons/favicon-32.png"/>
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png"/>
 
 <!-- PWA -->
 <link rel="manifest" href="manifest.json"/>
@@ -12,7 +14,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
 <meta name="apple-mobile-web-app-title" content="NOSH7 CRM"/>
-<link rel="apple-touch-icon" href="icons/icon-192.png"/>
 <meta name="application-name" content="NOSH7 CRM"/>
 <meta name="description" content="WhatsApp Lead Management for NOSH7"/>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -439,16 +440,14 @@ function renderLeads(){
             ${l.name}
             ${hasExtra?`<button class="ab" title="More details" onclick="event.stopPropagation();toggleExpand('${l.id}')" style="font-size:11px;padding:1px 5px;color:var(--accent);border:1px solid var(--accent);border-radius:4px;line-height:1.4" id="expbtn-${l.id}">▾</button>`:""}
           </div>
-          <div style="display:flex;gap:3px;margin-top:4px">
-            ${l.email?`<button class="ab" onclick="event.stopPropagation();openEmailModal('${l.id}')" title="Email: ${l.email}" style="font-size:16px;padding:2px 3px;line-height:1">📧</button>`:""}
-            ${l.website?`<button class="ab" onclick="event.stopPropagation();window.open('${webURL(l.website)}','_blank')" title="www.${l.website}" style="font-size:16px;padding:2px 3px;line-height:1">🌐</button>`:""}
-          </div>
         </td>
         <td>
           <div style="font-family:monospace;color:var(--muted);font-size:11px;margin-bottom:4px">+91 ${l.phone}</div>
-          <div style="display:flex;gap:4px">
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
             <button class="btn-wa" onclick="event.stopPropagation();openWA('${l.id}')">💬 WA</button>
             <button class="btn-call" onclick="event.stopPropagation();window.open('tel:+91${l.phone}')">📞</button>
+            ${l.email?`<button class="ab" onclick="event.stopPropagation();openEmailModal('${l.id}')" title="Email: ${l.email}" style="font-size:16px;padding:2px 4px;line-height:1;background:#fef3c7;border-color:#fde68a">📧</button>`:""}
+            ${l.website?`<button class="ab" onclick="event.stopPropagation();window.open('${webURL(l.website)}','_blank')" title="www.${l.website}" style="font-size:16px;padding:2px 4px;line-height:1;background:#eff6ff;border-color:#bfdbfe">🌐</button>`:""}
           </div>
         </td>
         <td>${badge(l.status)}</td>
@@ -487,6 +486,8 @@ function renderLeads(){
             <span style="font-family:monospace;font-size:12px;color:var(--muted)">+91 ${l.phone}</span>
             <button class="btn-wa" onclick="openWA('${l.id}')">💬 WA</button>
             <button class="btn-call" onclick="window.open('tel:+91${l.phone}')">📞</button>
+            ${l.email?`<button class="ab" onclick="openEmailModal('${l.id}')" title="${l.email}" style="font-size:16px;padding:1px 4px;line-height:1;background:#fef3c7;border-color:#fde68a">📧</button>`:""}
+            ${l.website?`<button class="ab" onclick="window.open('${webURL(l.website)}','_blank')" title="www.${l.website}" style="font-size:16px;padding:1px 4px;line-height:1;background:#eff6ff;border-color:#bfdbfe">🌐</button>`:""}
           </div>
         </div>
         <button class="ab" onclick="delLead('${l.id}')" title="Delete" style="flex-shrink:0;margin-left:8px">🗑</button>
@@ -1054,8 +1055,9 @@ function applyEmailTpl(tid,lid){
   if(t&&l){
     const body=$("em-body");
     if(body){body.value=t.message.replace(/{name}/g,l.name);const c=$("em-c");if(c)c.textContent=body.value.length+" chars";}
-    // Auto-fill subject from template name if blank
-    const sub=$("em-sub");if(sub&&!sub.value)sub.value=t.name;
+    // Use template's subject field, fall back to template name
+    const sub=$("em-sub");
+    if(sub)sub.value=(t.subject||"").replace(/{name}/g,l.name)||(sub.value||t.name);
   }
 }
 
@@ -1077,26 +1079,43 @@ async function sendEmail(id){
 // ── TEMPLATES ─────────────────────────────────────────────────────────────────
 function renderTpls(){
   return `<div class="fade" style="padding-top:6px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;margin-top:30px">
-      <div><h1 class="page-title" style="font-size:21px;font-weight:700">Templates</h1><p style="color:var(--muted);font-size:12px">WA messages with {name} personalization</p></div>
-      <button class="btn btn-p btn-sm" onclick="openTF()">＋ New</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;margin-top:30px;flex-wrap:wrap;gap:8px">
+      <div><h1 class="page-title" style="font-size:21px;font-weight:700">Templates</h1>
+        <p style="color:var(--muted);font-size:12px">WhatsApp & Email templates · double-click card to edit · use {name} to personalize</p></div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <label class="btn btn-s btn-sm" style="cursor:pointer">📂 Bulk Upload
+          <input type="file" accept=".csv,.xls,.xlsx" onchange="importTemplates(event)" style="display:none">
+        </label>
+        <button class="btn btn-p btn-sm" onclick="openTF()">＋ New Template</button>
+      </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:11px">
-      ${S.templates.map(t=>`<div class="card" style="padding:15px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:9px">
-          <div><p style="font-weight:600;font-size:13px">${t.name}</p><span style="font-size:10px;color:var(--muted)">${t.message.length} chars</span></div>
-          <div style="display:flex;gap:3px"><button class="ab" onclick="openTF('${t.id}')">✏️</button><button class="ab" onclick="delTpl('${t.id}')">🗑</button></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:11px">
+      ${S.templates.map(t=>`<div class="card" style="padding:15px;cursor:pointer" ondblclick="openTF('${t.id}')" title="Double-click to edit">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div style="flex:1;min-width:0">
+            <p style="font-weight:700;font-size:13px;margin-bottom:2px">${t.name}</p>
+            ${t.subject?`<p style="font-size:10px;color:#e8a838;font-weight:600">📧 Subject: ${t.subject}</p>`:""}
+            <span style="font-size:10px;color:var(--muted)">${t.message.length} chars</span>
+          </div>
+          <button class="ab" onclick="event.stopPropagation();delTpl('${t.id}')" title="Delete">🗑</button>
         </div>
-        <p style="font-size:12px;color:var(--muted);line-height:1.65;background:var(--surface);padding:9px 11px;border-radius:7px;border:1.5px solid var(--border)">${t.message}</p>
+        <p style="font-size:12px;color:var(--muted);line-height:1.65;background:var(--surface);padding:9px 11px;border-radius:7px;border:1.5px solid var(--border);white-space:pre-wrap">${t.message}</p>
       </div>`).join("")}
+    </div>
+    <div style="margin-top:16px;padding:12px 16px;background:var(--surface);border-radius:10px;border:1.5px solid var(--border);font-size:11px;color:var(--muted)">
+      💡 <strong>Bulk Upload format:</strong> CSV or Excel with columns — <code style="background:#e2e8f0;padding:1px 5px;border-radius:4px">name, subject, message</code> · subject is optional
     </div>
   </div>`;
 }
+
 function openTF(id){
   const t=id?S.templates.find(x=>x.id===id):null;
   modal(`<div class="mh"><h3 style="font-weight:700;font-size:15px">${t?"✏️ Edit":"➕ New"} Template</h3>${mX()}</div>
     <div class="mb">
-      <div class="fg"><label class="label">Name</label><input class="input" id="tf-n" value="${t?.name||""}" placeholder="e.g. Initial Greeting"></div>
+      <div class="fg"><label class="label">Template Name</label>
+        <input class="input" id="tf-n" value="${t?.name||""}" placeholder="e.g. Initial Greeting"></div>
+      <div class="fg"><label class="label">Email Subject Line <span style="color:var(--muted);font-weight:400">(optional — used when emailing)</span></label>
+        <input class="input" id="tf-s" value="${t?.subject||""}" placeholder="e.g. Enquiry about your salad subscription"></div>
       <div class="fg"><label class="label">Message · <span style="color:var(--accent)">Use {name} to personalize</span></label>
         <textarea class="input" id="tf-m" rows="5" style="resize:vertical">${t?.message||""}</textarea></div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -1105,19 +1124,67 @@ function openTF(id){
       </div>
     </div>`);
 }
+
 async function saveTF(id){
-  const name=$("tf-n")?.value||"",message=$("tf-m")?.value||"";
-  if(!name||!message){toast("Fill all fields","err");return;}
+  const name=($("tf-n")?.value||"").trim();
+  const subject=($("tf-s")?.value||"").trim();
+  const message=($("tf-m")?.value||"").trim();
+  if(!name||!message){toast("Name and message are required","err");return;}
   try{
-    if(id){await api.patch("templates",{name,message},`id=eq.${id}`);S.templates=S.templates.map(t=>t.id===id?{...t,name,message}:t);toast("Updated!");}
-    else{const n={id:"t"+Date.now(),name,message};await api.post("templates",n);S.templates=[...S.templates,n];toast("Added!");}
+    if(id){
+      await api.patch("templates",{name,subject,message},`id=eq.${id}`);
+      S.templates=S.templates.map(t=>t.id===id?{...t,name,subject,message}:t);
+      toast("Template updated!");
+    }else{
+      const n={id:"t"+Date.now(),name,subject,message};
+      await api.post("templates",n);
+      S.templates=[...S.templates,n];
+      toast("Template added!");
+    }
     closeModal();render();
   }catch(e){toast("Error: "+e.message,"err");}
 }
+
 async function delTpl(id){
-  if(!confirm("Delete?"))return;
+  if(!confirm("Delete this template?"))return;
   try{await api.del("templates",`id=eq.${id}`);S.templates=S.templates.filter(t=>t.id!==id);toast("Deleted");render();}
   catch(e){toast("Error","err");}
+}
+
+// Bulk template import from CSV/Excel
+async function importTemplates(event){
+  const file=event.target.files[0];if(!file)return;
+  event.target.value="";
+  try{
+    const data=await file.arrayBuffer();
+    const wb=XLSX.read(data,{type:"array"});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{defval:""});
+    if(!rows.length){toast("No rows found","err");return;}
+
+    // Flexible column mapping
+    const map=(row,keys)=>{for(const k of keys){const v=row[k]||row[k.toLowerCase()]||row[k.toUpperCase()]||"";if(v)return String(v).trim();}return "";};
+
+    let added=0,skipped=0;
+    const toAdd=[];
+    for(const row of rows){
+      const name=map(row,["name","Name","template_name","Template Name"]);
+      const subject=map(row,["subject","Subject","email_subject","Email Subject"]);
+      const message=map(row,["message","Message","body","Body","text","Text"]);
+      if(!name||!message){skipped++;continue;}
+      if(S.templates.some(t=>t.name===name)){skipped++;continue;} // skip duplicates
+      toAdd.push({id:"t"+Date.now()+"_"+added,name,subject,message});
+      added++;
+    }
+    if(toAdd.length){
+      await api.post("templates",toAdd);
+      S.templates=[...S.templates,...toAdd];
+      toast(`✓ ${added} templates imported${skipped?` · ${skipped} skipped`:""}`);
+      render();
+    }else{
+      toast(skipped?`All ${skipped} rows skipped (duplicates or missing data)`:"Nothing to import","err");
+    }
+  }catch(e){toast("Import error: "+e.message,"err");}
 }
 
 // ── CATEGORIES ────────────────────────────────────────────────────────────────
