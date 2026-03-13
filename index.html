@@ -4,8 +4,8 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>NOSH7 CRM</title>
-<link rel="icon" type="image/png" href="icons/favicon-32.png"/>
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png"/>
+<link rel="icon" type="image/png" href="./icons/favicon-32.png"/>
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png"/>
 
 <!-- PWA -->
 <link rel="manifest" href="manifest.json"/>
@@ -450,7 +450,7 @@ function renderLeads(){
             ${l.website?`<button class="ab" onclick="event.stopPropagation();window.open('${webURL(l.website)}','_blank')" title="www.${l.website}" style="font-size:16px;padding:2px 4px;line-height:1;background:#eff6ff;border-color:#bfdbfe">🌐</button>`:""}
           </div>
         </td>
-        <td>${badge(l.status)}</td>
+        <td onclick="event.stopPropagation();quickStatusPick('${l.id}')" title="Click to change status" style="cursor:pointer">${badge(l.status)}<div style="font-size:9px;color:var(--muted);margin-top:2px;text-align:center">tap to change</div></td>
         <td style="color:var(--muted);font-size:12px">${l.category||"—"}</td>
         <td style="color:${od?"#ef4444":l.follow_up_date?"#f59e0b":"var(--muted)"};font-size:11px">${l.follow_up_date||"—"}</td>
         <td style="color:var(--muted);font-size:11px">${l.last_contacted||"—"}</td>
@@ -479,8 +479,6 @@ function renderLeads(){
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
             <input type="checkbox" ${sel?"checked":""} onchange="toggleOne('${l.id}',this.checked)" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px">
             <span style="font-weight:700;font-size:14px;color:var(--text)">${l.name}</span>
-            ${l.email?`<button class="ab" onclick="openEmailModal('${l.id}')" title="${l.email}" style="font-size:16px;padding:1px 3px;line-height:1">📧</button>`:""}
-            ${l.website?`<button class="ab" onclick="window.open('${webURL(l.website)}','_blank')" title="www.${l.website}" style="font-size:16px;padding:1px 3px;line-height:1">🌐</button>`:""}
           </div>
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
             <span style="font-family:monospace;font-size:12px;color:var(--muted)">+91 ${l.phone}</span>
@@ -493,7 +491,7 @@ function renderLeads(){
         <button class="ab" onclick="delLead('${l.id}')" title="Delete" style="flex-shrink:0;margin-left:8px">🗑</button>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px">
-        ${badge(l.status)}
+        <span onclick="quickStatusPick('${l.id}')" title="Tap to change status" style="cursor:pointer">${badge(l.status)}</span>
         <span style="color:var(--muted)">${l.category||""}</span>
         ${l.follow_up_date?`<span style="color:${od?"#ef4444":"#f59e0b"};font-size:11px">📅 ${l.follow_up_date}</span>`:""}
         ${l.last_contacted?`<span style="color:var(--muted);font-size:11px">✉ ${l.last_contacted}</span>`:""}
@@ -515,7 +513,17 @@ function renderLeads(){
       </div>
       <div class="actions" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
         <label class="btn btn-s btn-sm" style="cursor:pointer">📂 Import <input type="file" accept=".csv,.xls,.xlsx,.ods" onchange="openImport(event)" style="display:none"></label>
-        <button class="btn btn-s btn-sm" onclick="exportCSV()">⬇ Export</button>
+        <div style="position:relative;display:inline-block" id="exp-wrap">
+          <button class="btn btn-s btn-sm" onclick="toggleExpMenu()">⬇ Export ▾</button>
+          <div id="exp-menu" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1.5px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:200;min-width:200px;overflow:hidden">
+            <button onclick="exportAll();toggleExpMenu()" style="display:block;width:100%;padding:10px 14px;text-align:left;background:none;border:none;cursor:pointer;font-size:12px;font-family:Sora,sans-serif;border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">
+              📋 <strong>Full Export</strong><br><span style="color:var(--muted);font-size:10px">All fields · filtered view</span>
+            </button>
+            <button onclick="exportRekart();toggleExpMenu()" style="display:block;width:100%;padding:10px 14px;text-align:left;background:none;border:none;cursor:pointer;font-size:12px;font-family:Sora,sans-serif" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='none'">
+              🔄 <strong>Rekart Format</strong><br><span style="color:var(--muted);font-size:10px">Ready to import into Rekart</span>
+            </button>
+          </div>
+        </div>
         <button class="btn btn-p btn-sm" onclick="openLF()">＋ Add Lead</button>
       </div>
     </div>
@@ -618,18 +626,94 @@ async function bulkDel(){
   try{await api.del("leads",`id=in.(${ids.join(",")})`);S.leads=S.leads.filter(l=>!S.sel.has(l.id));S.sel.clear();setCount();toast(`${ids.length} deleted`);render();}
   catch(e){toast("Error","err");}
 }
-function exportCSV(){
+function toggleExpMenu(){
+  const m=document.getElementById("exp-menu");if(!m)return;
+  const open=m.style.display!=="none";
+  m.style.display=open?"none":"block";
+  if(!open){
+    // Close on outside click
+    setTimeout(()=>{
+      const close=e=>{if(!document.getElementById("exp-wrap")?.contains(e.target)){m.style.display="none";document.removeEventListener("click",close);}};
+      document.addEventListener("click",close);
+    },10);
+  }
+}
+
+function exportAll(){
   const rows=filtL();
-  const h=["Name","Phone","Email","Website","Address","Area","Status","Category","Follow Up","Last Contacted","Notes"];
+  const h=["Name","Phone","Email","Website","Address","Area","Status","Category","Follow Up","Last Contacted","Notes","Created Date"];
   const csv=[h.join(","),...rows.map(l=>[
-    l.name,
-    cleanPhone(l.phone),
-    l.email,
-    cleanWebsite(l.website),
-    l.address,l.area,l.status,l.category,l.follow_up_date,l.last_contacted,l.notes
+    l.name, cleanPhone(l.phone), l.email, cleanWebsite(l.website),
+    l.address, l.area, l.status, l.category,
+    l.follow_up_date, l.last_contacted, l.notes, l.created_date
   ].map(v=>`"${(v||"").replace(/"/g,'""')}"`).join(","))].join("\n");
-  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="nosh7_leads.csv";a.click();
-  toast("CSV exported — phone as 10-digit, website as domain only!");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"}));
+  a.download=`nosh7_leads_${today()}.csv`;a.click();
+  toast("Full export downloaded!");
+}
+
+function exportRekart(){
+  // Rekart import format columns (from template)
+  const h=["name","phone","email","address1","address2","landmark","city","pincode","state","country","gps_location","address_type","address_other","route_name","credit_limit","custom_warning_limit","custom_block_limit","product_name","plan_name","rate","delivery_time","plan_quota","start_date","end_date","schedule_type","schedule_type_daily","daily_quantity","alt_day_1","alt_day_2","nth_day_pattern","custom_mon","custom_tue","custom_wed","custom_thu","custom_fri","custom_sat","custom_sun"];
+  const rows=filtL();
+  const data=rows.map(l=>{
+    // Split address into address1 + address2 if long
+    const addr=(l.address||"").trim();
+    const addr1=addr.length>50?addr.substring(0,50):addr;
+    const addr2=addr.length>50?addr.substring(50):"";
+    const row={
+      name:l.name||"",
+      phone:cleanPhone(l.phone)||"",
+      email:l.email||"",
+      address1:addr1,
+      address2:addr2,
+      landmark:"",
+      city:l.area||"",
+      pincode:"",state:"Gujarat",country:"India",
+      gps_location:"",address_type:"Home",address_other:"",
+      route_name:"",credit_limit:"",custom_warning_limit:"",custom_block_limit:"",
+      product_name:"",plan_name:"",rate:"",delivery_time:"",plan_quota:"",
+      start_date:"",end_date:"",schedule_type:"",schedule_type_daily:"",daily_quantity:"",
+      alt_day_1:"",alt_day_2:"",nth_day_pattern:"",
+      custom_mon:"",custom_tue:"",custom_wed:"",custom_thu:"",custom_fri:"",custom_sat:"",custom_sun:""
+    };
+    return h.map(k=>`"${(row[k]||"").replace(/"/g,'""')}"`).join(",");
+  });
+  const csv=[h.join(","),...data].join("\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"}));
+  a.download=`nosh7_rekart_${today()}.csv`;a.click();
+  toast("Rekart format exported — ready to import!");
+}
+
+// Quick status picker — inline popup on status badge click
+function quickStatusPick(id){
+  const l=S.leads.find(x=>x.id===id);if(!l)return;
+  // Find the clicked cell/element to position near it
+  modal(`
+    <div class="mh"><h3 style="font-weight:700;font-size:15px">⚡ Quick Status — ${l.name}</h3>${mX()}</div>
+    <div class="mb" style="padding-bottom:12px">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Current: ${badge(l.status)} · Select new status:</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${STATUSES.map(s=>`<button
+          class="btn btn-s"
+          style="justify-content:flex-start;gap:8px;${l.status===s?"border-color:var(--accent);background:var(--accent-dim);font-weight:700;pointer-events:none":""}"
+          onclick="${l.status!==s?`quickStatusSave('${id}','${s}')`:""}"
+          ${l.status===s?"disabled":""}>
+          <span style="width:9px;height:9px;border-radius:50%;background:${SC[s]||"#94a3b8"};flex-shrink:0"></span>
+          ${s}${l.status===s?" ✓":""}
+        </button>`).join("")}
+      </div>
+    </div>`,380);
+}
+
+async function quickStatusSave(id,status){
+  try{
+    await api.patch("leads",{status},`id=eq.${id}`);
+    S.leads=S.leads.map(l=>l.id===id?{...l,status}:l);
+    toast(`Status → ${status} ✓`);closeModal();render();
+  }catch(e){toast("Error: "+e.message,"err");}
 }
 
 // ── IMPORT ────────────────────────────────────────────────────────────────────
