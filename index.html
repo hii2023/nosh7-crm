@@ -129,6 +129,15 @@ input,select,textarea,button{font-family:'Sora',sans-serif}
   .desktop-only{display:none}
   .filter-row{flex-direction:column;gap:6px}
   .filter-row>*{width:100%}
+  /* Mobile tap improvements */
+  .btn-wa,.btn-call{min-height:38px;font-size:12px}
+  .lead-card{border-radius:14px;margin-bottom:12px}
+  .modal{border-radius:18px 18px 0 0 !important;position:fixed !important;bottom:0 !important;top:auto !important;max-height:88vh !important;width:100% !important;max-width:100% !important}
+  .ov{align-items:flex-end !important;padding:0 !important}
+  .input{font-size:16px !important;padding:11px 13px !important} /* prevent iOS zoom */
+  select.input{font-size:16px !important}
+  .top-bar h1{font-size:18px !important}
+  #bulk-bar{padding-bottom:max(10px, env(safe-area-inset-bottom))}
 }
 /* floating bulk bar */
 #bulk-bar{position:fixed;bottom:0;left:0;right:0;z-index:500;background:#0f172a;color:#f1f5f9;padding:10px 20px;display:none;align-items:center;gap:10px;box-shadow:0 -4px 24px rgba(0,0,0,.25);flex-wrap:wrap;border-top:1px solid #1e293b}
@@ -243,9 +252,16 @@ function cleanPhone(raw){
   return d.slice(-10);       // keep last 10 digits only
 }
 
-// Display phone with +91 prefix
-function dispPhone(p){return p?`+91 ${cleanPhone(p)}`:"";}
-
+// Display phone with +91 prefix — always cleans first to prevent double +91
+function dispPhone(p){
+  if(!p)return"";
+  const c=cleanPhone(p);
+  return c?`+91 ${c}`:"";
+}
+// Tel link — always clean
+function telLink(p){return`tel:+91${cleanPhone(p)}`;}
+// WA link — always clean
+function waLink(p){return`https://wa.me/91${cleanPhone(p)}`;}
 // ── WEBSITE NORMALIZER ───────────────────────────────────────────────────────
 // Strips http://, https://, www. — stores clean domain only (e.g. example.com)
 function cleanWebsite(raw){
@@ -442,26 +458,30 @@ function renderLeads(){
           </div>
         </td>
         <td>
-          <div style="font-family:monospace;color:var(--muted);font-size:11px;margin-bottom:4px">+91 ${l.phone}</div>
+          <div style="font-family:monospace;color:var(--muted);font-size:11px;margin-bottom:4px">${dispPhone(l.phone)}</div>
           <div style="display:flex;gap:4px;flex-wrap:wrap">
             <button class="btn-wa" onclick="event.stopPropagation();openWA('${l.id}')">💬 WA</button>
-            <button class="btn-call" onclick="event.stopPropagation();window.open('tel:+91${l.phone}')">📞</button>
+            <button class="btn-call" onclick="event.stopPropagation();window.open(telLink('${l.phone}'))">📞</button>
             ${l.email?`<button class="ab" onclick="event.stopPropagation();openEmailModal('${l.id}')" title="Email: ${l.email}" style="font-size:16px;padding:2px 4px;line-height:1;background:#fef3c7;border-color:#fde68a">📧</button>`:""}
             ${l.website?`<button class="ab" onclick="event.stopPropagation();window.open('${webURL(l.website)}','_blank')" title="www.${l.website}" style="font-size:16px;padding:2px 4px;line-height:1;background:#eff6ff;border-color:#bfdbfe">🌐</button>`:""}
           </div>
         </td>
-        <td onclick="event.stopPropagation();quickStatusPick('${l.id}')" title="Click to change status" style="cursor:pointer">${badge(l.status)}<div style="font-size:9px;color:var(--muted);margin-top:2px;text-align:center">tap to change</div></td>
-        <td style="color:var(--muted);font-size:12px">${l.category||"—"}</td>
-        <td style="color:${od?"#ef4444":l.follow_up_date?"#f59e0b":"var(--muted)"};font-size:11px">${l.follow_up_date||"—"}</td>
+        <td onclick="event.stopPropagation();quickStatusPick('${l.id}')" title="Click to change status" style="cursor:pointer">${badge(l.status)}<div style="font-size:9px;color:var(--muted);margin-top:2px;text-align:center">tap ✎</div></td>
+        <td onclick="event.stopPropagation();quickCategoryPick('${l.id}')" title="Click to change category" style="cursor:pointer;color:var(--muted);font-size:12px">${l.category||"—"}<div style="font-size:9px;color:var(--accent);margin-top:1px">tap ✎</div></td>
+        <td onclick="event.stopPropagation();quickFollowupPick('${l.id}')" title="Click to set follow-up date" style="cursor:pointer;color:${od?"#ef4444":l.follow_up_date?"#f59e0b":"var(--muted)"};font-size:11px">${l.follow_up_date||"set date"}<div style="font-size:9px;color:var(--accent);margin-top:1px">tap ✎</div></td>
         <td style="color:var(--muted);font-size:11px">${l.last_contacted||"—"}</td>
         <td><button class="ab" title="Delete" onclick="event.stopPropagation();delLead('${l.id}')">🗑</button></td>
       </tr>`,
       // Expandable detail row
       `<tr id="exp-${l.id}" style="display:none;background:#f8fafc">
         <td colspan="8" style="padding:8px 14px 12px 46px;font-size:12px;color:var(--muted);border-bottom:1.5px solid var(--border)">
-          <div style="display:flex;flex-wrap:wrap;gap:12px">
+          <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
             ${l.area?`<span>📍 <strong style="color:var(--text)">${l.area}</strong></span>`:""}
-            ${l.address?`<span>🏠 <strong style="color:var(--text)">${l.address}</strong></span>`:""}
+            ${l.address?`<span>🏠 <strong style="color:var(--text)">${l.address}</strong></span>
+              <button onclick="openMaps('${(l.address+(l.area?", "+l.area:"")).replace(/'/g,"\\'")}','${l.id}')" style="background:#4285f4;color:#fff;border:none;border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:Sora,sans-serif">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                Maps
+              </button>`:""}
             ${l.notes?`<span style="flex:1;min-width:200px">📝 ${l.notes}</span>`:""}
           </div>
         </td>
@@ -469,39 +489,55 @@ function renderLeads(){
     ];
   }).join("");
 
-  // Mobile cards — compact view, area/address/notes behind expand tap
+  // Mobile cards — redesigned for touch-first UX
   const mCards=paged.map(l=>{
     const sel=S.sel.has(l.id),od=l.follow_up_date&&l.follow_up_date<today();
-    const hasExtra=!!(l.area||l.address||l.notes);
-    return `<div data-id="${l.id}" class="lead-card" style="border-left:3px solid ${SC[l.status]||"#94a3b8"}" ondblclick="openLF('${l.id}')">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-        <div style="flex:1">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-            <input type="checkbox" ${sel?"checked":""} onchange="toggleOne('${l.id}',this.checked)" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px">
-            <span style="font-weight:700;font-size:14px;color:var(--text)">${l.name}</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <span style="font-family:monospace;font-size:12px;color:var(--muted)">+91 ${l.phone}</span>
-            <button class="btn-wa" onclick="openWA('${l.id}')">💬 WA</button>
-            <button class="btn-call" onclick="window.open('tel:+91${l.phone}')">📞</button>
-            ${l.email?`<button class="ab" onclick="openEmailModal('${l.id}')" title="${l.email}" style="font-size:16px;padding:1px 4px;line-height:1;background:#fef3c7;border-color:#fde68a">📧</button>`:""}
-            ${l.website?`<button class="ab" onclick="window.open('${webURL(l.website)}','_blank')" title="www.${l.website}" style="font-size:16px;padding:1px 4px;line-height:1;background:#eff6ff;border-color:#bfdbfe">🌐</button>`:""}
-          </div>
-        </div>
-        <button class="ab" onclick="delLead('${l.id}')" title="Delete" style="flex-shrink:0;margin-left:8px">🗑</button>
+    const hasExtra=!!(l.address||l.notes);
+    const mapsAddr=encodeURIComponent((l.address||"")+(l.area?", "+l.area:"")+(", Ahmedabad, Gujarat"));
+    return `<div data-id="${l.id}" class="lead-card" style="border-left:4px solid ${SC[l.status]||"#94a3b8"};padding:12px 14px 10px">
+
+      <!-- Row 1: checkbox + name + delete -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <input type="checkbox" ${sel?"checked":""} onchange="toggleOne('${l.id}',this.checked)" style="accent-color:var(--accent);cursor:pointer;width:16px;height:16px;flex-shrink:0">
+        <span style="font-weight:700;font-size:15px;color:var(--text);flex:1;line-height:1.3">${l.name}</span>
+        <button class="ab" onclick="delLead('${l.id}')" style="color:var(--red);flex-shrink:0;padding:4px">🗑</button>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px">
-        <span onclick="quickStatusPick('${l.id}')" title="Tap to change status" style="cursor:pointer">${badge(l.status)}</span>
-        <span style="color:var(--muted)">${l.category||""}</span>
-        ${l.follow_up_date?`<span style="color:${od?"#ef4444":"#f59e0b"};font-size:11px">📅 ${l.follow_up_date}</span>`:""}
-        ${l.last_contacted?`<span style="color:var(--muted);font-size:11px">✉ ${l.last_contacted}</span>`:""}
-        ${hasExtra?`<button onclick="toggleExpandCard('${l.id}',this)" style="background:none;border:1px solid var(--accent);color:var(--accent);border-radius:5px;padding:1px 7px;font-size:11px;cursor:pointer;margin-left:auto" id="mcbtn-${l.id}">▾ more</button>`:""}
+
+      <!-- Row 2: phone number -->
+      <div style="font-family:monospace;font-size:13px;color:var(--muted);margin-bottom:8px;padding-left:2px">${dispPhone(l.phone)}</div>
+
+      <!-- Row 3: action buttons — WA · Call · Email · Web -->
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+        <button class="btn-wa" onclick="openWA('${l.id}')" style="flex:1;min-width:70px;padding:8px 6px;font-size:12px;justify-content:center">💬 WhatsApp</button>
+        <button class="btn-call" onclick="window.open(telLink('${l.phone}'))" style="flex:1;min-width:60px;padding:8px 6px;font-size:12px;justify-content:center">📞 Call</button>
+        ${l.email?`<button class="ab" onclick="openEmailModal('${l.id}')" title="${l.email}" style="padding:8px 10px;background:#fef3c7;border:1px solid #fde68a;border-radius:6px;font-size:18px;line-height:1">📧</button>`:""}
+        ${l.website?`<button class="ab" onclick="window.open('${webURL(l.website)}','_blank')" title="www.${l.website}" style="padding:8px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:18px;line-height:1">🌐</button>`:""}
       </div>
-      <div id="mexp-${l.id}" style="display:none;margin-top:8px;padding:8px;background:var(--surface);border-radius:8px;border:1px solid var(--border);font-size:12px;color:var(--muted)">
-        ${l.area?`<div style="margin-bottom:4px">📍 <strong style="color:var(--text)">${l.area}</strong></div>`:""}
-        ${l.address?`<div style="margin-bottom:4px">🏠 <strong style="color:var(--text)">${l.address}</strong></div>`:""}
-        ${l.notes?`<div>📝 ${l.notes}</div>`:""}
+
+      <!-- Row 4: status · category · followup — all tappable -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;align-items:center">
+        <span onclick="quickStatusPick('${l.id}')" style="cursor:pointer">${badge(l.status)}</span>
+        <span onclick="quickCategoryPick('${l.id}')" style="cursor:pointer;font-size:11px;padding:3px 9px;border-radius:999px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-weight:500">
+          ${l.category||"set category"} ✎
+        </span>
+        <span onclick="quickFollowupPick('${l.id}')" style="cursor:pointer;font-size:11px;padding:3px 9px;border-radius:999px;background:${od?"#fef2f2":l.follow_up_date?"#fefce8":"var(--surface)"};border:1px solid ${od?"#fca5a5":l.follow_up_date?"#fde047":"var(--border)"};color:${od?"#ef4444":l.follow_up_date?"#ca8a04":"var(--muted)"};font-weight:500">
+          📅 ${l.follow_up_date||"set date"} ✎
+        </span>
       </div>
+
+      <!-- Row 5: area + maps button (if address exists) -->
+      ${(l.area||l.address)?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;color:var(--muted)">
+        <span>📍 ${l.area||""}${l.area&&l.address?" · ":""}${l.address?l.address.substring(0,35)+(l.address.length>35?"...":""):""}</span>
+        ${(l.address||l.area)?`<button onclick="window.open('https://maps.google.com/?q=${mapsAddr}','_blank')" style="background:#4285f4;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:Sora,sans-serif;flex-shrink:0;margin-left:auto">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          Maps
+        </button>`:""}
+      </div>`:""}
+
+      <!-- Row 6: notes (collapsible) -->
+      ${l.notes?`<div onclick="toggleExpandCard('${l.id}',this)" style="cursor:pointer;font-size:11px;color:var(--accent);margin-bottom:4px" id="mcbtn-${l.id}">📝 Show note ▾</div>
+      <div id="mexp-${l.id}" style="display:none;font-size:12px;color:var(--muted);padding:7px 10px;background:var(--surface);border-radius:7px;border:1px solid var(--border);line-height:1.5">${l.notes}</div>`:""}
+
     </div>`;
   }).join("");
 
@@ -713,6 +749,79 @@ async function quickStatusSave(id,status){
     await api.patch("leads",{status},`id=eq.${id}`);
     S.leads=S.leads.map(l=>l.id===id?{...l,status}:l);
     toast(`Status → ${status} ✓`);closeModal();render();
+  }catch(e){toast("Error: "+e.message,"err");}
+}
+
+// Google Maps opener
+function openMaps(addr,id){
+  const l=S.leads.find(x=>x.id===id);
+  const q=addr||(l?(l.address||"")+(l.area?", "+l.area:""):"");
+  window.open(`https://maps.google.com/?q=${encodeURIComponent(q+", Ahmedabad, Gujarat")}`, "_blank");
+}
+
+// Quick category picker (like status picker)
+function quickCategoryPick(id){
+  const l=S.leads.find(x=>x.id===id);if(!l)return;
+  modal(`
+    <div class="mh"><h3 style="font-weight:700;font-size:15px">📂 Category — ${l.name}</h3>${mX()}</div>
+    <div class="mb" style="padding-bottom:12px">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Current: <strong>${l.category||"None"}</strong> · Select new:</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${S.categories.map(c=>`<button
+          class="btn btn-s"
+          style="justify-content:flex-start;gap:8px;${l.category===c?"border-color:var(--accent);background:var(--accent-dim);font-weight:700;pointer-events:none":""}"
+          onclick="${l.category!==c?`quickCategorySave('${id}','${c.replace(/'/g,"\\'")}')`:""}"
+          ${l.category===c?"disabled":""}>
+          ${c}${l.category===c?" ✓":""}
+        </button>`).join("")}
+      </div>
+      <div style="margin-top:10px;display:flex;justify-content:flex-end">
+        <button class="btn btn-g btn-sm" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>`,380);
+}
+
+async function quickCategorySave(id,category){
+  try{
+    await api.patch("leads",{category},`id=eq.${id}`);
+    S.leads=S.leads.map(l=>l.id===id?{...l,category}:l);
+    toast(`Category → ${category} ✓`);closeModal();render();
+  }catch(e){toast("Error: "+e.message,"err");}
+}
+
+// Quick follow-up date picker
+function quickFollowupPick(id){
+  const l=S.leads.find(x=>x.id===id);if(!l)return;
+  modal(`
+    <div class="mh"><h3 style="font-weight:700;font-size:15px">📅 Follow-up Date — ${l.name}</h3>${mX()}</div>
+    <div class="mb">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Current: <strong>${l.follow_up_date||"Not set"}</strong></p>
+      <div class="fg">
+        <label class="label">Select Date</label>
+        <input class="input" type="date" id="qfu-date" value="${l.follow_up_date||today()}" min="${today()}" style="font-size:16px;padding:12px">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+        ${[["Today",today()],["Tomorrow",addDays(1)],["In 3 days",addDays(3)],["Next week",addDays(7)],["In 2 weeks",addDays(14)],["Clear",""]].map(([lbl,val])=>`
+          <button class="btn btn-s btn-sm" onclick="setQFU('${val}')" style="font-size:11px;text-align:center;justify-content:center">${lbl}</button>
+        `).join("")}
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-g btn-sm" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-p" onclick="saveQuickFollowup('${id}')">✓ Save</button>
+      </div>
+    </div>`,380);
+}
+
+function addDays(n){const d=new Date();d.setDate(d.getDate()+n);return d.toISOString().split("T")[0];}
+function setQFU(val){const e=$("qfu-date");if(e)e.value=val;}
+
+async function saveQuickFollowup(id){
+  const follow_up_date=$("qfu-date")?.value||"";
+  try{
+    await api.patch("leads",{follow_up_date},`id=eq.${id}`);
+    S.leads=S.leads.map(l=>l.id===id?{...l,follow_up_date}:l);
+    toast(follow_up_date?`Follow-up → ${follow_up_date} ✓`:"Follow-up cleared ✓");
+    closeModal();render();
   }catch(e){toast("Error: "+e.message,"err");}
 }
 
@@ -983,7 +1092,7 @@ async function sendWA(id){
   const msg=$("wp-m")?.value||"";if(!msg.trim()){toast("Enter a message","err");return;}
   const l=S.leads.find(x=>x.id===id);if(!l)return;
   const ph=cleanPhone(l.phone);
-  window.open(`https://wa.me/91${ph}?text=${encodeURIComponent(msg)}`,"_blank");
+  window.open(`https://wa.me/91${cleanPhone(l.phone)}?text=${encodeURIComponent(msg)}`,"_blank");
   const t=today();
   try{await api.patch("leads",{last_contacted:t},`id=eq.${id}`);S.leads=S.leads.map(x=>x.id===id?{...x,last_contacted:t}:x);}catch(e){}
   closeModal();render();
