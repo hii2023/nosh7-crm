@@ -4,6 +4,17 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>NOSH7 CRM</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#22c55e"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="NOSH7 CRM"/>
+<link rel="apple-touch-icon" href="icons/icon-192.png"/>
+<meta name="application-name" content="NOSH7 CRM"/>
+<meta name="description" content="WhatsApp Lead Management for NOSH7"/>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
@@ -416,65 +427,81 @@ function renderLeads(){
     pgHtml+=`<button class="btn btn-s btn-sm" onclick="lPage(${Math.min(pages,f.page+1)})" ${f.page===pages?"disabled":""}>›</button>`;
   }
 
-  // Desktop table rows
-  const tRows=paged.map(l=>{
+  // Desktop table rows — area/address/notes collapsed, email/website as icons
+  const tRows=paged.flatMap(l=>{
     const sel=S.sel.has(l.id),od=l.follow_up_date&&l.follow_up_date<today();
-    return `<tr data-id="${l.id}" style="background:${sel?"#f0fdf4":""};cursor:pointer" ondblclick="openLF('${l.id}')" title="Double-click to edit">
-      <td><input type="checkbox" ${sel?"checked":""} onchange="toggleOne('${l.id}',this.checked)" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px"></td>
-      <td><div style="font-weight:600">${l.name}</div>${l.email?`<div style="font-size:10px;color:var(--muted)">${l.email}</div>`:""}</td>
-      <td>
-        <div style="font-family:monospace;color:var(--muted);font-size:11px;margin-bottom:4px">+91 ${l.phone}</div>
-        <div style="display:flex;gap:4px">
-          <button class="btn-wa" onclick="openWA('${l.id}')">💬 WA</button>
-          <button class="btn-call" onclick="window.open('tel:+91${l.phone}')">📞</button>
-        </div>
-      </td>
-      <td>${badge(l.status)}</td>
-      <td style="color:var(--muted);font-size:12px">${l.category||"—"}</td>
-      <td style="color:var(--muted);font-size:12px">${l.area||"—"}</td>
-      <td style="color:${od?"#ef4444":l.follow_up_date?"#f59e0b":"var(--muted)"};font-size:11px">${l.follow_up_date||"—"}</td>
-      <td style="color:var(--muted);font-size:11px">${l.last_contacted||"—"}</td>
-      <td style="color:var(--muted);font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(l.notes||"").replace(/"/g,"'")}">${l.notes||"—"}</td>
-      <td><div style="display:flex;gap:1px;flex-wrap:nowrap">
-        ${l.email?`<button class="ab" title="Email" onclick="window.open('mailto:${l.email}')">📧</button>`:""}
-        ${l.website?`<button class="ab" title="Website: www.${l.website}" onclick="window.open('${webURL(l.website)}','_blank')">🌐</button>`:""}
-        <button class="ab" title="Edit" onclick="openLF('${l.id}')">✏️</button>
-        <button class="ab" title="Delete" onclick="delLead('${l.id}')">🗑</button>
-      </div></td>
-    </tr>`;
+    const hasExtra=!!(l.area||l.address||l.notes);
+    return [
+      `<tr data-id="${l.id}" style="background:${sel?"#f0fdf4":""};cursor:pointer" ondblclick="openLF('${l.id}')" title="Double-click to edit">
+        <td><input type="checkbox" ${sel?"checked":""} onchange="toggleOne('${l.id}',this.checked)" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px"></td>
+        <td>
+          <div style="font-weight:600;display:flex;align-items:center;gap:6px">
+            ${l.name}
+            ${hasExtra?`<button class="ab" title="More details" onclick="event.stopPropagation();toggleExpand('${l.id}')" style="font-size:11px;padding:1px 5px;color:var(--accent);border:1px solid var(--accent);border-radius:4px;line-height:1.4" id="expbtn-${l.id}">▾</button>`:""}
+          </div>
+          <div style="display:flex;gap:3px;margin-top:4px">
+            ${l.email?`<button class="ab" onclick="event.stopPropagation();openEmailModal('${l.id}')" title="Email: ${l.email}" style="font-size:16px;padding:2px 3px;line-height:1">📧</button>`:""}
+            ${l.website?`<button class="ab" onclick="event.stopPropagation();window.open('${webURL(l.website)}','_blank')" title="www.${l.website}" style="font-size:16px;padding:2px 3px;line-height:1">🌐</button>`:""}
+          </div>
+        </td>
+        <td>
+          <div style="font-family:monospace;color:var(--muted);font-size:11px;margin-bottom:4px">+91 ${l.phone}</div>
+          <div style="display:flex;gap:4px">
+            <button class="btn-wa" onclick="event.stopPropagation();openWA('${l.id}')">💬 WA</button>
+            <button class="btn-call" onclick="event.stopPropagation();window.open('tel:+91${l.phone}')">📞</button>
+          </div>
+        </td>
+        <td>${badge(l.status)}</td>
+        <td style="color:var(--muted);font-size:12px">${l.category||"—"}</td>
+        <td style="color:${od?"#ef4444":l.follow_up_date?"#f59e0b":"var(--muted)"};font-size:11px">${l.follow_up_date||"—"}</td>
+        <td style="color:var(--muted);font-size:11px">${l.last_contacted||"—"}</td>
+        <td><button class="ab" title="Delete" onclick="event.stopPropagation();delLead('${l.id}')">🗑</button></td>
+      </tr>`,
+      // Expandable detail row
+      `<tr id="exp-${l.id}" style="display:none;background:#f8fafc">
+        <td colspan="8" style="padding:8px 14px 12px 46px;font-size:12px;color:var(--muted);border-bottom:1.5px solid var(--border)">
+          <div style="display:flex;flex-wrap:wrap;gap:12px">
+            ${l.area?`<span>📍 <strong style="color:var(--text)">${l.area}</strong></span>`:""}
+            ${l.address?`<span>🏠 <strong style="color:var(--text)">${l.address}</strong></span>`:""}
+            ${l.notes?`<span style="flex:1;min-width:200px">📝 ${l.notes}</span>`:""}
+          </div>
+        </td>
+      </tr>`
+    ];
   }).join("");
 
-  // Mobile cards — ALL fields visible, WA+Call beside phone
+  // Mobile cards — compact view, area/address/notes behind expand tap
   const mCards=paged.map(l=>{
     const sel=S.sel.has(l.id),od=l.follow_up_date&&l.follow_up_date<today();
-    return `<div data-id="${l.id}" class="lead-card" style="border-left:3px solid ${SC[l.status]||"#94a3b8"}" ondblclick="openLF('${l.id}')" title="Double-click to edit">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+    const hasExtra=!!(l.area||l.address||l.notes);
+    return `<div data-id="${l.id}" class="lead-card" style="border-left:3px solid ${SC[l.status]||"#94a3b8"}" ondblclick="openLF('${l.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
         <div style="flex:1">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
             <input type="checkbox" ${sel?"checked":""} onchange="toggleOne('${l.id}',this.checked)" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px">
             <span style="font-weight:700;font-size:14px;color:var(--text)">${l.name}</span>
+            ${l.email?`<button class="ab" onclick="openEmailModal('${l.id}')" title="${l.email}" style="font-size:16px;padding:1px 3px;line-height:1">📧</button>`:""}
+            ${l.website?`<button class="ab" onclick="window.open('${webURL(l.website)}','_blank')" title="www.${l.website}" style="font-size:16px;padding:1px 3px;line-height:1">🌐</button>`:""}
           </div>
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
             <span style="font-family:monospace;font-size:12px;color:var(--muted)">+91 ${l.phone}</span>
             <button class="btn-wa" onclick="openWA('${l.id}')">💬 WA</button>
-            <button class="btn-call" onclick="window.open('tel:+91${l.phone}')">📞 Call</button>
+            <button class="btn-call" onclick="window.open('tel:+91${l.phone}')">📞</button>
           </div>
         </div>
-        <div style="display:flex;gap:3px;flex-shrink:0;margin-left:8px">
-          <button class="ab" onclick="openLF('${l.id}')" title="Edit">✏️</button>
-          <button class="ab" onclick="delLead('${l.id}')" title="Delete">🗑</button>
-        </div>
+        <button class="ab" onclick="delLead('${l.id}')" title="Delete" style="flex-shrink:0;margin-left:8px">🗑</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:12px">
-        <div><span style="color:var(--muted)">Status: </span>${badge(l.status)}</div>
-        <div><span style="color:var(--muted)">Category: </span><strong>${l.category||"—"}</strong></div>
-        <div><span style="color:var(--muted)">Area: </span><strong>${l.area||"—"}</strong></div>
-        ${l.email?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Email: </span><a href="mailto:${l.email}" style="color:var(--blue);text-decoration:none">${l.email}</a></div>`:""}
-        ${l.website?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Web: </span><a href="${webURL(l.website)}" target="_blank" style="color:var(--blue);text-decoration:none">www.${l.website}</a></div>`:""}
-        ${l.address?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Address: </span><strong>${l.address}</strong></div>`:""}
-        ${l.follow_up_date?`<div><span style="color:var(--muted)">Follow-up: </span><strong style="color:${od?"#ef4444":"#f59e0b"}">${l.follow_up_date}</strong></div>`:""}
-        ${l.last_contacted?`<div><span style="color:var(--muted)">Last contact: </span><strong>${l.last_contacted}</strong></div>`:""}
-        ${l.notes?`<div style="grid-column:1/-1;margin-top:4px;padding:6px 8px;background:var(--surface);border-radius:7px;border:1px solid var(--border);color:var(--muted);">${l.notes}</div>`:""}
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px">
+        ${badge(l.status)}
+        <span style="color:var(--muted)">${l.category||""}</span>
+        ${l.follow_up_date?`<span style="color:${od?"#ef4444":"#f59e0b"};font-size:11px">📅 ${l.follow_up_date}</span>`:""}
+        ${l.last_contacted?`<span style="color:var(--muted);font-size:11px">✉ ${l.last_contacted}</span>`:""}
+        ${hasExtra?`<button onclick="toggleExpandCard('${l.id}',this)" style="background:none;border:1px solid var(--accent);color:var(--accent);border-radius:5px;padding:1px 7px;font-size:11px;cursor:pointer;margin-left:auto" id="mcbtn-${l.id}">▾ more</button>`:""}
+      </div>
+      <div id="mexp-${l.id}" style="display:none;margin-top:8px;padding:8px;background:var(--surface);border-radius:8px;border:1px solid var(--border);font-size:12px;color:var(--muted)">
+        ${l.area?`<div style="margin-bottom:4px">📍 <strong style="color:var(--text)">${l.area}</strong></div>`:""}
+        ${l.address?`<div style="margin-bottom:4px">🏠 <strong style="color:var(--text)">${l.address}</strong></div>`:""}
+        ${l.notes?`<div>📝 ${l.notes}</div>`:""}
       </div>
     </div>`;
   }).join("");
@@ -516,16 +543,14 @@ function renderLeads(){
           <thead><tr>
             <th style="width:32px"><input type="checkbox" ${allChk?"checked":""} onchange="togAll(this.checked)" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px"></th>
             <th class="s" onclick="lSort('name')">Name ${arr("name")}</th>
-            <th class="s" onclick="lSort('phone')">Phone + Quick Actions ${arr("phone")}</th>
+            <th class="s" onclick="lSort('phone')">Phone ${arr("phone")}</th>
             <th class="s" onclick="lSort('status')">Status ${arr("status")}</th>
             <th class="s" onclick="lSort('category')">Category ${arr("category")}</th>
-            <th class="s" onclick="lSort('area')">Area ${arr("area")}</th>
             <th class="s" onclick="lSort('follow_up_date')">Follow Up ${arr("follow_up_date")}</th>
             <th class="s" onclick="lSort('last_contacted')">Last Contact ${arr("last_contacted")}</th>
-            <th>Notes</th>
-            <th>More</th>
+            <th style="width:40px"></th>
           </tr></thead>
-          <tbody>${tRows.length?tRows:`<tr><td colspan="10" style="padding:40px;text-align:center;color:var(--muted)">No leads found. Add your first lead!</td></tr>`}</tbody>
+          <tbody>${tRows.length?tRows:`<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--muted)">No leads found. Add your first lead!</td></tr>`}</tbody>
         </table>
       </div>
       <div style="padding:10px 16px;border-top:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -556,6 +581,24 @@ function lFil(k,v){S.f[k]=v;if(k!=="showAll")S.f.page=1;render();}
 function lSort(k){if(S.f.sort===k)S.f.dir=S.f.dir==="asc"?"desc":"asc";else{S.f.sort=k;S.f.dir="asc";}render();}
 function lPage(p){S.f.page=p;render();}
 function togAll(c){const all=filtL();if(c)all.forEach(l=>S.sel.add(l.id));else S.sel.clear();render();}
+
+// Expand/collapse hidden details (desktop)
+function toggleExpand(id){
+  const row=document.getElementById("exp-"+id);
+  const btn=document.getElementById("expbtn-"+id);
+  if(!row)return;
+  const open=row.style.display!=="none";
+  row.style.display=open?"none":"table-row";
+  if(btn)btn.textContent=open?"▾":"▴";
+}
+// Expand/collapse hidden details (mobile)
+function toggleExpandCard(id,btn){
+  const el=document.getElementById("mexp-"+id);
+  if(!el)return;
+  const open=el.style.display!=="none";
+  el.style.display=open?"none":"block";
+  if(btn)btn.textContent=open?"▾ more":"▴ less";
+}
 function toggleOne(id,c){c?S.sel.add(id):S.sel.delete(id);renderBulkBar();
   // Update row highlight without full re-render
   const row=document.querySelector(`tr[data-id="${id}"]`);
@@ -858,29 +901,9 @@ async function sendWA(id){
   window.open(`https://wa.me/91${ph}?text=${encodeURIComponent(msg)}`,"_blank");
   const t=today();
   try{await api.patch("leads",{last_contacted:t},`id=eq.${id}`);S.leads=S.leads.map(x=>x.id===id?{...x,last_contacted:t}:x);}catch(e){}
-  const wasNew=l.status==="New";
-  closeModal();
-  render();
-  // Prompt status update for New leads after messaging
-  if(wasNew){
-    setTimeout(()=>{
-      modal(`
-        <div class="mh"><h3 style="font-weight:700;font-size:15px">📋 Update Status for ${l.name}?</h3>${mX()}</div>
-        <div class="mb">
-          <p style="font-size:13px;color:var(--muted);margin-bottom:14px">You just messaged <strong>${l.name}</strong> who is currently <span style="color:#3b82f6;font-weight:600">New</span>. Would you like to update their status?</p>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
-            ${STATUSES.filter(s=>s!=="New").map(s=>`<button class="btn btn-s" style="justify-content:flex-start;gap:8px" onclick="quickStatus('${id}','${s}')">
-              <span style="width:8px;height:8px;border-radius:50%;background:${SC[s]};flex-shrink:0"></span>${s}
-            </button>`).join("")}
-          </div>
-          <div style="display:flex;justify-content:flex-end">
-            <button class="btn btn-g btn-sm" onclick="closeModal()">Keep as New</button>
-          </div>
-        </div>`,420);
-    },400);
-  }else{
-    toast("WhatsApp opened!");
-  }
+  closeModal();render();
+  // Always prompt to update status + follow-up after sending WA
+  setTimeout(()=>promptPostAction(id,"whatsapp"),400);
 }
 
 async function quickStatus(id,status){
@@ -889,6 +912,166 @@ async function quickStatus(id,status){
     S.leads=S.leads.map(l=>l.id===id?{...l,status}:l);
     toast(`Status → ${status}`);closeModal();render();
   }catch(e){toast("Error: "+e.message,"err");}
+}
+
+// ── POST-ACTION PROMPT: status + follow-up date ───────────────────────────────
+// Called after WA or Email — always. Both fields optional. Only saves changes.
+function promptPostAction(leadId, channel){
+  const l=S.leads.find(x=>x.id===leadId);if(!l)return;
+  const icon=channel==="email"?"📧":"💬";
+  const ch=channel==="email"?"Email":"WhatsApp";
+  // Store original status so we only write if changed
+  window._paOrigStatus=l.status;
+  window._paNewStatus=null;
+  modal(`
+    <div class="mh">
+      <h3 style="font-weight:700;font-size:15px">${icon} ${ch} sent · Update ${l.name}</h3>
+      ${mX()}
+    </div>
+    <div class="mb">
+      <!-- Status strip -->
+      <div style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <label class="label" style="margin:0">Status</label>
+          <span style="font-size:11px;color:var(--muted)">current: ${badge(l.status)}</span>
+          <span style="font-size:11px;color:var(--muted);margin-left:auto">tap to change · optional</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:7px" id="pa-statuses">
+          ${STATUSES.map(s=>{
+            const active=l.status===s;
+            const dot=`<span style="width:9px;height:9px;border-radius:50%;background:${SC[s]||"#94a3b8"};flex-shrink:0;display:inline-block"></span>`;
+            return `<button id="pabtn-${s.replace(/\s/g,'_')}" onclick="paSelectStatus(this,'${s}')"
+              style="display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:9px;border:1.5px solid ${active?"var(--accent)":"var(--border)"};background:${active?"var(--accent-dim)":"var(--surface)"};cursor:pointer;font-size:12px;font-weight:${active?"700":"500"};font-family:Sora,sans-serif;color:var(--text);transition:all .12s">
+              ${dot}${s}${active?` <span style="color:var(--accent);margin-left:auto;font-size:10px">✓</span>`:""}
+            </button>`;
+          }).join("")}
+        </div>
+      </div>
+
+      <!-- Follow-up date -->
+      <div style="margin-bottom:20px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <label class="label" style="margin:0">Follow-up Date</label>
+          <span style="font-size:11px;color:var(--muted);margin-left:auto">optional</span>
+        </div>
+        <input class="input" type="date" id="pa-followup" value="${l.follow_up_date||""}" min="${today()}"
+          style="max-width:200px">
+        ${l.follow_up_date?`<button onclick="document.getElementById('pa-followup').value=''" style="background:none;border:none;font-size:11px;color:#ef4444;cursor:pointer;margin-left:8px">✕ clear</button>`:""}
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:14px">
+        <button class="btn btn-g btn-sm" onclick="closeModal()">Skip</button>
+        <button class="btn btn-p" onclick="savePostAction('${leadId}')">✓ Save & Close</button>
+      </div>
+    </div>`,500);
+}
+
+function paSelectStatus(btn,status){
+  // Deselect all, re-render with plain style
+  document.querySelectorAll("#pa-statuses button").forEach(b=>{
+    b.style.borderColor="var(--border)";b.style.background="var(--surface)";b.style.fontWeight="500";
+    // Remove checkmark if present
+    const chk=b.querySelector("span[style*='✓']");if(chk)chk.remove();
+  });
+  // Highlight selected
+  btn.style.borderColor="var(--accent)";btn.style.background="var(--accent-dim)";btn.style.fontWeight="700";
+  const chk=document.createElement("span");
+  chk.style.cssText="color:var(--accent);margin-left:auto;font-size:10px";
+  chk.textContent="✓";
+  btn.appendChild(chk);
+  window._paNewStatus=status;
+}
+
+async function savePostAction(leadId){
+  const newStatus=window._paNewStatus;
+  const origStatus=window._paOrigStatus;
+  const followup=document.getElementById("pa-followup")?.value||"";
+  const updates={};
+  // Only write status if actually changed
+  if(newStatus && newStatus!==origStatus) updates.status=newStatus;
+  // Only write follow_up if it differs from current
+  const lead=S.leads.find(l=>l.id===leadId);
+  if(followup && followup!==(lead?.follow_up_date||"")) updates.follow_up_date=followup;
+  if(!followup && lead?.follow_up_date) {} // don't clear unless explicitly cleared
+  if(Object.keys(updates).length){
+    try{
+      await api.patch("leads",updates,`id=eq.${leadId}`);
+      S.leads=S.leads.map(l=>l.id===leadId?{...l,...updates}:l);
+      const parts=[];
+      if(updates.status) parts.push(`Status → ${updates.status}`);
+      if(updates.follow_up_date) parts.push(`Follow-up → ${updates.follow_up_date}`);
+      toast(parts.join(" · ")+" ✓");
+    }catch(e){toast("Save error","err");}
+  }else{
+    toast("No changes made");
+  }
+  closeModal();render();
+}
+
+// ── EMAIL MODAL ───────────────────────────────────────────────────────────────
+function openEmailModal(id){
+  const l=S.leads.find(x=>x.id===id);if(!l||!l.email){toast("No email for this lead","err");return;}
+  modal(`
+    <div class="mh">
+      <h3 style="font-weight:700;font-size:15px">📧 Email ${l.name}</h3>
+      ${mX()}
+    </div>
+    <div class="mb">
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:9px;padding:10px 13px;margin-bottom:14px;font-size:12px">
+        <span style="color:var(--muted)">To: </span><strong>${l.email}</strong>
+      </div>
+
+      <div class="fg">
+        <label class="label">Select Template <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+        <select class="input" onchange="applyEmailTpl(this.value,'${id}')" style="font-size:12px">
+          <option value="">— Choose a template —</option>
+          ${S.templates.map(t=>`<option value="${t.id}">${t.name}</option>`).join("")}
+        </select>
+      </div>
+
+      <div class="fg">
+        <label class="label">Subject</label>
+        <input class="input" id="em-sub" placeholder="e.g. Regarding your enquiry" value="">
+      </div>
+
+      <div class="fg">
+        <label class="label">Message Body</label>
+        <textarea class="input" id="em-body" rows="5" style="resize:vertical" placeholder="Type your message..."></textarea>
+        <p style="font-size:10px;color:var(--muted);margin-top:3px" id="em-c">0 chars</p>
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+        <button class="btn btn-s" onclick="closeModal()">Cancel</button>
+        <button class="btn" style="background:#e8a838;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;font-weight:600" onclick="sendEmail('${id}')">📧 Open Email App</button>
+      </div>
+    </div>`,460);
+  $("em-body")?.addEventListener("input",function(){const c=$("em-c");if(c)c.textContent=this.value.length+" chars";});
+}
+
+function applyEmailTpl(tid,lid){
+  if(!tid)return;
+  const t=S.templates.find(x=>x.id===tid),l=S.leads.find(x=>x.id===lid);
+  if(t&&l){
+    const body=$("em-body");
+    if(body){body.value=t.message.replace(/{name}/g,l.name);const c=$("em-c");if(c)c.textContent=body.value.length+" chars";}
+    // Auto-fill subject from template name if blank
+    const sub=$("em-sub");if(sub&&!sub.value)sub.value=t.name;
+  }
+}
+
+async function sendEmail(id){
+  const l=S.leads.find(x=>x.id===id);if(!l)return;
+  const subject=$("em-sub")?.value||"";
+  const body=$("em-body")?.value||"";
+  // Build mailto: link
+  const mailto=`mailto:${l.email}${subject||body?"?":""}${subject?"subject="+encodeURIComponent(subject):""}${subject&&body?"&":""}${body?"body="+encodeURIComponent(body):""}`;
+  window.open(mailto);
+  // Update last_contacted
+  const t=today();
+  try{await api.patch("leads",{last_contacted:t},`id=eq.${id}`);S.leads=S.leads.map(x=>x.id===id?{...x,last_contacted:t}:x);}catch(e){}
+  closeModal();
+  // Prompt status + follow-up after a short delay (email app opens)
+  setTimeout(()=>promptPostAction(id,"email"),500);
 }
 
 // ── TEMPLATES ─────────────────────────────────────────────────────────────────
@@ -1007,7 +1190,75 @@ async function delCat(cat){
   catch(e){toast("Error","err");}
 }
 
-// ── GO ────────────────────────────────────────────────────────────────────────
+// ── PWA: SERVICE WORKER REGISTRATION ─────────────────────────────────────────
+if("serviceWorker" in navigator){
+  window.addEventListener("load", ()=>{
+    navigator.serviceWorker.register("/sw.js")
+      .then(reg=>{
+        console.log("[NOSH7] SW registered:", reg.scope);
+        // Check for updates every time app opens
+        reg.addEventListener("updatefound", ()=>{
+          const newSW = reg.installing;
+          newSW.addEventListener("statechange", ()=>{
+            if(newSW.state==="installed" && navigator.serviceWorker.controller){
+              // New version available — show update banner
+              showUpdateBanner();
+            }
+          });
+        });
+      })
+      .catch(err=>console.warn("[NOSH7] SW failed:", err));
+  });
+}
+
+// Show a gentle "Update available" banner
+function showUpdateBanner(){
+  const b=document.createElement("div");
+  b.style.cssText="position:fixed;top:0;left:0;right:0;z-index:9999;background:#0f172a;color:#f1f5f9;padding:10px 18px;display:flex;align-items:center;gap:10px;font-size:13px;font-family:Sora,sans-serif;box-shadow:0 2px 12px rgba(0,0,0,.2)";
+  b.innerHTML=`<span style="flex:1">🔄 New version of NOSH7 CRM available</span><button onclick="window.location.reload()" style="background:#22c55e;color:#fff;border:none;border-radius:7px;padding:5px 12px;cursor:pointer;font-size:12px;font-family:Sora,sans-serif;font-weight:600">Update</button><button onclick="this.parentElement.remove()" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:16px">✕</button>`;
+  document.body.prepend(b);
+}
+
+// ── PWA: INSTALL PROMPT ───────────────────────────────────────────────────────
+let _installPrompt=null;
+window.addEventListener("beforeinstallprompt", e=>{
+  e.preventDefault();
+  _installPrompt=e;
+  // Show install button after 3 seconds if not already installed
+  setTimeout(showInstallHint, 3000);
+});
+
+function showInstallHint(){
+  if(!_installPrompt || localStorage.getItem("pwa-dismissed"))return;
+  const b=document.createElement("div");
+  b.id="install-hint";
+  b.style.cssText="position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:9998;background:#0f172a;color:#f1f5f9;padding:12px 18px;border-radius:14px;display:flex;align-items:center;gap:10px;font-size:12px;font-family:Sora,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,.25);max-width:340px;width:90%";
+  b.innerHTML=`<span style="font-size:22px">📲</span><span style="flex:1;line-height:1.5">Install <strong>NOSH7 CRM</strong> on your home screen for quick access</span><button onclick="triggerInstall()" style="background:#22c55e;color:#fff;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;font-family:Sora,sans-serif;font-weight:600;white-space:nowrap">Install</button><button onclick="dismissInstall()" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:16px;padding:0 2px">✕</button>`;
+  document.body.appendChild(b);
+}
+
+function triggerInstall(){
+  if(!_installPrompt)return;
+  _installPrompt.prompt();
+  _installPrompt.userChoice.then(r=>{
+    if(r.outcome==="accepted"){toast("NOSH7 CRM installed! ✅");}
+    _installPrompt=null;
+    document.getElementById("install-hint")?.remove();
+  });
+}
+function dismissInstall(){
+  localStorage.setItem("pwa-dismissed","1");
+  document.getElementById("install-hint")?.remove();
+}
+
+// Handle ?action=add shortcut from PWA home screen icon
+window.addEventListener("load",()=>{
+  if(new URLSearchParams(location.search).get("action")==="add"){
+    setTimeout(()=>openLF(), 800);
+  }
+});
+
+// ── START ─────────────────────────────────────────────────────────────────────
 init();
 </script>
 </body>
