@@ -118,6 +118,11 @@ input,select,textarea,button{font-family:'Sora',sans-serif}
   .filter-row{flex-direction:column;gap:6px}
   .filter-row>*{width:100%}
 }
+/* floating bulk bar */
+#bulk-bar{position:fixed;bottom:0;left:0;right:0;z-index:500;background:#0f172a;color:#f1f5f9;padding:10px 20px;display:none;align-items:center;gap:10px;box-shadow:0 -4px 24px rgba(0,0,0,.25);flex-wrap:wrap;border-top:1px solid #1e293b}
+#bulk-bar.show{display:flex}
+#main.has-bulk{padding-bottom:60px}
+@media(max-width:768px){#bulk-bar{padding:10px 12px;gap:7px}}
 </style>
 </head>
 <body>
@@ -168,6 +173,16 @@ input,select,textarea,button{font-family:'Sora',sans-serif}
 </main>
 <div id="modal-wrap"></div>
 <div id="toast" style="display:none"></div>
+
+<!-- Floating Bulk Action Bar -->
+<div id="bulk-bar">
+  <span class="bcount" id="bulk-count">0 selected</span>
+  <div style="flex:1;min-width:10px"></div>
+  <button class="btn btn-s btn-sm" onclick="openBulk()">📝 Bulk Update</button>
+  <button class="btn btn-d btn-sm" onclick="bulkDel()">🗑 Delete</button>
+  <button class="btn btn-p btn-sm" onclick="openLF()">＋ Add Lead</button>
+  <button onclick="S.sel=new Set();renderBulkBar();render()" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:18px;padding:0 4px;line-height:1">✕</button>
+</div>
 
 <script>
 // ── API ──────────────────────────────────────────────────────────────────────
@@ -301,51 +316,85 @@ function render(){
   if(S.tab==="leads")     m.innerHTML=renderLeads();
   if(S.tab==="templates") m.innerHTML=renderTpls();
   if(S.tab==="categories")m.innerHTML=renderCats();
+  renderBulkBar();
+}
+
+function renderBulkBar(){
+  const bar=$("bulk-bar"),cnt=$("bulk-count"),main=$("main");
+  if(!bar)return;
+  const n=S.sel.size;
+  if(n>0){bar.classList.add("show");main?.classList.add("has-bulk");if(cnt)cnt.textContent=`✓ ${n} lead${n>1?"s":""} selected`;}
+  else{bar.classList.remove("show");main?.classList.remove("has-bulk");}
 }
 
 // ── DASHBOARD ────────────────────────────────────────────────────────────────
+function goFilter(status,category){
+  S.f.status=status||"all";S.f.category=category||"all";S.f.page=1;
+  go("leads");
+}
 function renderDash(){
   const l=S.leads,t=today();
   const st=[
-    {lbl:"Total Leads",v:l.length,c:"#22c55e"},
-    {lbl:"New",v:l.filter(x=>x.status==="New").length,c:"#3b82f6",cl:true},
-    {lbl:"Interested",v:l.filter(x=>x.status==="Interested").length,c:"#8b5cf6"},
-    {lbl:"Follow-up Today",v:l.filter(x=>x.follow_up_date===t).length,c:"#f59e0b"},
-    {lbl:"Converted",v:l.filter(x=>x.status==="Converted").length,c:"#22c55e"},
+    {lbl:"Total Leads",v:l.length,c:"#22c55e",tip:""},
+    {lbl:"New",v:l.filter(x=>x.status==="New").length,c:"#3b82f6",status:"New"},
+    {lbl:"Interested",v:l.filter(x=>x.status==="Interested").length,c:"#8b5cf6",status:"Interested"},
+    {lbl:"Follow-up Today",v:l.filter(x=>x.follow_up_date===t).length,c:"#f59e0b",tip:""},
+    {lbl:"Converted",v:l.filter(x=>x.status==="Converted").length,c:"#22c55e",status:"Converted"},
   ];
   const dist=STATUSES.map(s=>({s,n:l.filter(x=>x.status===s).length,c:SC[s]})).filter(d=>d.n>0);
   const maxN=Math.max(...dist.map(d=>d.n),1);
-  const cats=S.categories.map(c=>({c,n:l.filter(x=>x.category===c).length})).filter(x=>x.n>0);
+  // Multi-cat aware count: a lead with "A, B" counts for both A and B
+  const cats=S.categories.map(c=>({c,n:l.filter(x=>hasCategory(x,c)).length})).filter(x=>x.n>0);
   const recent=[...l].sort((a,b)=>(b.created_date||"").localeCompare(a.created_date||"")).slice(0,5);
   return `<div class="fade" style="padding-top:6px">
-    <div style="margin-bottom:18px"><h1 class="page-title" style="font-size:21px;font-weight:700;margin-top:30px">Dashboard</h1>
-    <p style="color:var(--muted);font-size:12px;margin-top:2px">${new Date().toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</p></div>
+    <div style="margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-start">
+      <div><h1 class="page-title" style="font-size:21px;font-weight:700;margin-top:30px">Dashboard</h1>
+      <p style="color:var(--muted);font-size:12px;margin-top:2px">${new Date().toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</p></div>
+      <button class="btn btn-p btn-sm" onclick="openLF()" style="margin-top:30px;flex-shrink:0">＋ Add Lead</button>
+    </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-      ${st.map(s=>`<div class="stat ${s.cl?"cl":""}" ${s.cl?`onclick="go('leads')"`:""}><p style="color:var(--muted);font-size:10px;margin-bottom:4px;font-weight:500">${s.lbl}</p><p style="font-size:26px;font-weight:700;color:${s.c};line-height:1">${s.v}</p></div>`).join("")}
+      ${st.map(s=>`<div class="stat ${s.status?"cl":""}" ${s.status?`onclick="goFilter('${s.status}','')" title="View ${s.lbl} leads"`:""}><p style="color:var(--muted);font-size:10px;margin-bottom:4px;font-weight:500">${s.lbl}${s.status?` <span style='font-size:9px'>↗</span>`:""}</p><p style="font-size:26px;font-weight:700;color:${s.c};line-height:1">${s.v}</p></div>`).join("")}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div class="card" style="padding:16px">
-        <p style="font-weight:600;font-size:12px;color:var(--text);margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Status Distribution</p>
-        ${dist.length?dist.map(({s,n,c})=>`<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:11px;color:var(--muted)">${s}</span><span style="font-size:11px;font-weight:600;color:${c}">${n}</span></div><div style="height:5px;background:var(--surface);border-radius:999px;border:1px solid var(--border)"><div style="height:100%;width:${(n/maxN)*100}%;background:${c};border-radius:999px"></div></div></div>`).join(""):"<p style='color:var(--muted);font-size:12px'>No data yet</p>"}
+        <p style="font-weight:600;font-size:12px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Status · click to filter</p>
+        ${dist.length?dist.map(({s,n,c})=>`<div style="margin-bottom:9px;cursor:pointer;border-radius:6px;padding:3px 4px" onclick="goFilter('${s}','')" title="View ${s} leads">
+          <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+            <span style="font-size:11px;color:var(--muted)">${s}</span>
+            <span style="font-size:11px;font-weight:600;color:${c}">${n} ↗</span>
+          </div>
+          <div style="height:5px;background:var(--surface);border-radius:999px;border:1px solid var(--border)">
+            <div style="height:100%;width:${(n/maxN)*100}%;background:${c};border-radius:999px"></div>
+          </div></div>`).join(""):"<p style='color:var(--muted);font-size:12px'>No data yet</p>"}
       </div>
       <div class="card" style="padding:16px">
-        <p style="font-weight:600;font-size:12px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Categories</p>
-        ${cats.length?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">${cats.map(({c,n})=>`<div style="background:var(--surface);border-radius:9px;padding:10px 12px;border:1.5px solid var(--border)"><p style="font-size:18px;font-weight:700;color:var(--accent);line-height:1">${n}</p><p style="font-size:10px;color:var(--muted);margin-top:2px">${c}</p></div>`).join("")}</div>`:"<p style='color:var(--muted);font-size:12px'>No data yet</p>"}
+        <p style="font-weight:600;font-size:12px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Categories · click to filter</p>
+        ${cats.length?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">${cats.map(({c,n})=>`<div style="background:var(--surface);border-radius:9px;padding:10px 12px;border:1.5px solid var(--border);cursor:pointer;transition:all .15s" onclick="goFilter('','${c}')" title="View ${c} leads" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'"><p style="font-size:18px;font-weight:700;color:var(--accent);line-height:1">${n}</p><p style="font-size:10px;color:var(--muted);margin-top:2px">${c} ↗</p></div>`).join("")}</div>`:"<p style='color:var(--muted);font-size:12px'>No data yet</p>"}
       </div>
     </div>
     ${recent.length?`<div class="card" style="padding:16px"><p style="font-weight:600;font-size:12px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Recently Added</p>
     <div style="overflow-x:auto"><table class="table"><thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Category</th><th>Date</th></tr></thead>
-    <tbody>${recent.map(l=>`<tr><td style="font-weight:500">${l.name}</td><td style="font-family:monospace;color:var(--muted);font-size:11px">${l.phone}</td><td>${badge(l.status)}</td><td style="color:var(--muted)">${l.category||"—"}</td><td style="color:var(--muted);font-size:11px">${l.created_date||"—"}</td></tr>`).join("")}
+    <tbody>${recent.map(l=>`<tr style="cursor:pointer" ondblclick="openLF('${l.id}')"><td style="font-weight:500">${l.name}</td><td style="font-family:monospace;color:var(--muted);font-size:11px">+91 ${l.phone}</td><td>${badge(l.status)}</td><td style="color:var(--muted)">${l.category||"—"}</td><td style="color:var(--muted);font-size:11px">${l.created_date||"—"}</td></tr>`).join("")}
     </tbody></table></div></div>`:""}
   </div>`;
 }
 
 // ── LEADS ────────────────────────────────────────────────────────────────────
+// Split a lead's category field into array (handles "Cat1, Cat2" from backend)
+function leadCats(l){
+  if(!l.category)return[];
+  return l.category.split(/[,;|]+/).map(c=>c.trim()).filter(Boolean);
+}
+// Check if lead belongs to a given category (partial match support)
+function hasCategory(l,cat){
+  return leadCats(l).some(c=>c.toLowerCase()===cat.toLowerCase());
+}
+
 function filtL(){
   const f=S.f;let r=[...S.leads];
   if(f.search){const q=f.search.toLowerCase();r=r.filter(l=>(l.name||"").toLowerCase().includes(q)||(l.phone||"").includes(q)||(l.email||"").toLowerCase().includes(q)||(l.area||"").toLowerCase().includes(q)||(l.category||"").toLowerCase().includes(q)||(l.notes||"").toLowerCase().includes(q));}
   if(f.status!=="all")r=r.filter(l=>l.status===f.status);
-  if(f.category!=="all")r=r.filter(l=>l.category===f.category);
+  if(f.category!=="all")r=r.filter(l=>hasCategory(l,f.category));
   r.sort((a,b)=>{const av=a[f.sort]||"",bv=b[f.sort]||"";return f.dir==="asc"?av.localeCompare(bv):bv.localeCompare(av);});
   return r;
 }
@@ -370,7 +419,7 @@ function renderLeads(){
   // Desktop table rows
   const tRows=paged.map(l=>{
     const sel=S.sel.has(l.id),od=l.follow_up_date&&l.follow_up_date<today();
-    return `<tr style="background:${sel?"#f0fdf4":""}">
+    return `<tr data-id="${l.id}" style="background:${sel?"#f0fdf4":""};cursor:pointer" ondblclick="openLF('${l.id}')" title="Double-click to edit">
       <td><input type="checkbox" ${sel?"checked":""} onchange="toggleOne('${l.id}',this.checked)" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px"></td>
       <td><div style="font-weight:600">${l.name}</div>${l.email?`<div style="font-size:10px;color:var(--muted)">${l.email}</div>`:""}</td>
       <td>
@@ -398,7 +447,7 @@ function renderLeads(){
   // Mobile cards — ALL fields visible, WA+Call beside phone
   const mCards=paged.map(l=>{
     const sel=S.sel.has(l.id),od=l.follow_up_date&&l.follow_up_date<today();
-    return `<div class="lead-card" style="border-left:3px solid ${SC[l.status]||"#94a3b8"}">
+    return `<div data-id="${l.id}" class="lead-card" style="border-left:3px solid ${SC[l.status]||"#94a3b8"}" ondblclick="openLF('${l.id}')" title="Double-click to edit">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
         <div style="flex:1">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
@@ -458,13 +507,7 @@ function renderLeads(){
       </select>
     </div>
 
-    ${selN?`<div style="display:flex;align-items:center;gap:7px;padding:8px 14px;background:var(--accent-dim);border:1.5px solid #86efac;border-radius:10px;margin-bottom:10px;flex-wrap:wrap">
-      <span style="font-size:12px;color:var(--accent-d);font-weight:600">✓ ${selN} selected</span>
-      <div style="flex:1"></div>
-      <button class="btn btn-s btn-sm" onclick="openBulk()">📝 Update</button>
-      <button class="btn btn-d btn-sm" onclick="bulkDel()">🗑 Delete</button>
-      <button class="btn btn-g btn-sm" onclick="S.sel=new Set();render()">✕</button>
-    </div>`:""}
+    ${selN?""/* floating bar handles this */:""}
 
     <!-- Desktop table -->
     <div class="card desktop-only" style="overflow:hidden">
@@ -513,7 +556,13 @@ function lFil(k,v){S.f[k]=v;if(k!=="showAll")S.f.page=1;render();}
 function lSort(k){if(S.f.sort===k)S.f.dir=S.f.dir==="asc"?"desc":"asc";else{S.f.sort=k;S.f.dir="asc";}render();}
 function lPage(p){S.f.page=p;render();}
 function togAll(c){const all=filtL();if(c)all.forEach(l=>S.sel.add(l.id));else S.sel.clear();render();}
-function toggleOne(id,c){c?S.sel.add(id):S.sel.delete(id);render();}
+function toggleOne(id,c){c?S.sel.add(id):S.sel.delete(id);renderBulkBar();
+  // Update row highlight without full re-render
+  const row=document.querySelector(`tr[data-id="${id}"]`);
+  if(row)row.style.background=c?"#f0fdf4":"";
+  const card=document.querySelector(`.lead-card[data-id="${id}"]`);
+  if(card)card.style.background=c?"#f0fdf4":"";
+}
 
 async function delLead(id){
   if(!confirm("Delete this lead?"))return;
@@ -808,8 +857,38 @@ async function sendWA(id){
   const ph=cleanPhone(l.phone);
   window.open(`https://wa.me/91${ph}?text=${encodeURIComponent(msg)}`,"_blank");
   const t=today();
-  try{await api.patch("leads",{last_contacted:t},`id=eq.${id}`);S.leads=S.leads.map(l=>l.id===id?{...l,last_contacted:t}:l);}catch(e){}
-  closeModal();toast("WhatsApp opened!");render();
+  try{await api.patch("leads",{last_contacted:t},`id=eq.${id}`);S.leads=S.leads.map(x=>x.id===id?{...x,last_contacted:t}:x);}catch(e){}
+  const wasNew=l.status==="New";
+  closeModal();
+  render();
+  // Prompt status update for New leads after messaging
+  if(wasNew){
+    setTimeout(()=>{
+      modal(`
+        <div class="mh"><h3 style="font-weight:700;font-size:15px">📋 Update Status for ${l.name}?</h3>${mX()}</div>
+        <div class="mb">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:14px">You just messaged <strong>${l.name}</strong> who is currently <span style="color:#3b82f6;font-weight:600">New</span>. Would you like to update their status?</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+            ${STATUSES.filter(s=>s!=="New").map(s=>`<button class="btn btn-s" style="justify-content:flex-start;gap:8px" onclick="quickStatus('${id}','${s}')">
+              <span style="width:8px;height:8px;border-radius:50%;background:${SC[s]};flex-shrink:0"></span>${s}
+            </button>`).join("")}
+          </div>
+          <div style="display:flex;justify-content:flex-end">
+            <button class="btn btn-g btn-sm" onclick="closeModal()">Keep as New</button>
+          </div>
+        </div>`,420);
+    },400);
+  }else{
+    toast("WhatsApp opened!");
+  }
+}
+
+async function quickStatus(id,status){
+  try{
+    await api.patch("leads",{status},`id=eq.${id}`);
+    S.leads=S.leads.map(l=>l.id===id?{...l,status}:l);
+    toast(`Status → ${status}`);closeModal();render();
+  }catch(e){toast("Error: "+e.message,"err");}
 }
 
 // ── TEMPLATES ─────────────────────────────────────────────────────────────────
