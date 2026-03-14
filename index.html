@@ -411,24 +411,33 @@ function renderDash(){
   const dist=STATUSES.map(s=>({s,n:l.filter(x=>x.status===s).length,c:SC[s]})).filter(d=>d.n>0);
   const maxN=Math.max(...dist.map(d=>d.n),1);
   const cats=S.categories.map(c=>({c,n:l.filter(x=>hasCategory(x,c)).length})).filter(x=>x.n>0);
-  const maxC=Math.max(...cats.map(x=>x.n),1);
   const recent=[...l].sort((a,b)=>(b.created_date||"").localeCompare(a.created_date||"")).slice(0,5);
   const q=getDailyQuote();
+
+  // For each category, compute per-status counts (for stacked bar)
+  function catStatusBreakdown(catName){
+    const catLeads=l.filter(x=>hasCategory(x,catName));
+    return STATUSES.map(s=>({s,n:catLeads.filter(x=>x.status===s).length,c:SC[s]})).filter(d=>d.n>0);
+  }
+
   return `<div class="fade" style="padding-top:6px">
 
-    <!-- Header row with quote -->
-    <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
-      <div>
-        <h1 class="page-title" style="font-size:21px;font-weight:700;margin-top:30px">Dashboard</h1>
-        <p style="color:var(--muted);font-size:12px;margin-top:2px">${new Date().toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</p>
+    <!-- Header: title + date + subtle quote + add button -->
+    <div style="margin-bottom:14px;margin-top:30px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+        <div>
+          <h1 class="page-title" style="font-size:21px;font-weight:700">Dashboard</h1>
+          <p style="color:var(--muted);font-size:12px;margin-top:2px">${new Date().toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</p>
+        </div>
+        <button class="btn btn-p btn-sm" onclick="openLF()" style="flex-shrink:0">＋ Add Lead</button>
       </div>
-      <!-- Daily Sales Quote -->
-      <div style="flex:1;min-width:220px;max-width:420px;margin-top:30px;background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:12px;padding:12px 16px;border:1px solid #334155">
-        <p style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#4ade80;font-weight:600;margin-bottom:5px">💡 Daily Sales Tip</p>
-        <p style="font-size:12px;color:#f1f5f9;line-height:1.5;font-style:italic">"${q.q}"</p>
-        <p style="font-size:10px;color:#64748b;margin-top:5px;text-align:right">— ${q.a}</p>
+      <!-- Subtle borderless daily quote — just text, right-aligned -->
+      <div style="margin-top:10px;padding:8px 0 2px;border-top:1px solid var(--border)">
+        <p style="font-size:12px;color:var(--muted);font-style:italic;line-height:1.55">
+          💡 <em>"${q.q}"</em>
+          <span style="font-size:10px;color:var(--dim);margin-left:6px">— ${q.a}</span>
+        </p>
       </div>
-      <button class="btn btn-p btn-sm" onclick="openLF()" style="margin-top:30px;flex-shrink:0">＋ Add Lead</button>
     </div>
 
     <!-- Stat cards -->
@@ -449,12 +458,12 @@ function renderDash(){
       <span style="font-size:20px">⚠️</span>
       <div style="flex:1">
         <p style="font-size:13px;font-weight:600;color:#b91c1c">${noFollowup.length} active leads without a follow-up date</p>
-        <p style="font-size:11px;color:#ef4444;margin-top:2px">Status: Contacted/Interested/Follow Up — no callback date set · tap to view</p>
+        <p style="font-size:11px;color:#ef4444;margin-top:2px">Contacted / Interested / Follow Up — no callback date set · tap to view</p>
       </div>
       <span style="font-size:12px;color:#ef4444;font-weight:700">↗</span>
     </div>`:""}
 
-    <!-- Status + Category side by side -->
+    <!-- Status distribution + Quick actions -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
       <div class="card" style="padding:16px">
         <p style="font-weight:600;font-size:11px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Status Distribution</p>
@@ -468,43 +477,78 @@ function renderDash(){
           </div></div>`).join(""):"<p style='color:var(--muted);font-size:12px'>No data yet</p>"}
       </div>
       <div class="card" style="padding:16px">
-        <p style="font-weight:600;font-size:11px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Quick Actions</p>
+        <p style="font-weight:600;font-size:11px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Quick Filters</p>
         <button onclick="goFilter('New','')" class="btn btn-s" style="width:100%;justify-content:space-between;margin-bottom:7px;font-size:12px">New Leads <span style="color:#3b82f6;font-weight:700">${l.filter(x=>x.status==="New").length}</span></button>
         <button onclick="goFilterFollowup()" class="btn btn-s" style="width:100%;justify-content:space-between;margin-bottom:7px;font-size:12px">Follow-up Today <span style="color:#f59e0b;font-weight:700">${fuToday.length}</span></button>
         <button onclick="goFilterNoFollowup()" class="btn btn-s" style="width:100%;justify-content:space-between;font-size:12px;${noFollowup.length?"border-color:#fca5a5;color:#b91c1c":""}">No Follow-up Set <span style="color:#ef4444;font-weight:700">${noFollowup.length}</span></button>
       </div>
     </div>
 
-    <!-- Category horizontal bars (full width) -->
+    <!-- Category Breakdown with stacked status bars -->
     <div class="card" style="padding:18px;margin-bottom:14px">
-      <p style="font-weight:600;font-size:11px;margin-bottom:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Category Breakdown · tap to filter</p>
-      ${cats.length?`<div style="display:flex;flex-direction:column;gap:9px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <p style="font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Category Breakdown · tap to filter</p>
+        <!-- Status legend -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+          ${STATUSES.map(s=>`<span style="display:inline-flex;align-items:center;gap:3px;font-size:9px;color:var(--muted)">
+            <span style="width:8px;height:8px;border-radius:2px;background:${SC[s]};flex-shrink:0;display:inline-block"></span>${s}
+          </span>`).join("")}
+        </div>
+      </div>
+      ${cats.length?`<div style="display:flex;flex-direction:column;gap:12px">
         ${cats.map(({c,n})=>{
           const pct=l.length?Math.round((n/l.length)*100):0;
-          return `<div onclick="goFilter('','${c}')" style="cursor:pointer;border-radius:10px;padding:10px 14px;border:1.5px solid var(--border);background:var(--surface);transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.background='#f0fdf4'" onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)'">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
-              <span style="font-weight:600;font-size:14px;color:var(--text)">${c}</span>
-              <div style="display:flex;align-items:center;gap:10px">
-                <span style="font-size:11px;color:var(--muted)">${pct}%</span>
-                <span style="font-size:22px;font-weight:800;color:var(--accent);line-height:1">${n}</span>
+          const breakdown=catStatusBreakdown(c);
+          // Build stacked bar segments
+          const segments=breakdown.map(({s,n:sn,c:sc})=>{
+            const w=n>0?Math.round((sn/n)*100):0;
+            const spct=Math.round((sn/n)*100);
+            return `<div title="${s}: ${sn} (${spct}%)" style="height:100%;width:${w}%;background:${sc};position:relative;transition:width .4s ease;min-width:${sn>0?'2px':'0'}" onmouseover="showSegTip(this,'${s}: ${sn} (${spct}%)')" onmouseout="hideSegTip()"></div>`;
+          }).join("");
+          // End labels: show each status count
+          const endLabels=breakdown.map(({s,n:sn,c:sc})=>
+            `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:${sc}">
+              <span style="width:7px;height:7px;border-radius:1px;background:${sc};display:inline-block"></span>${sn}
+            </span>`
+          ).join("");
+          return `<div onclick="goFilter('','${c}')" style="cursor:pointer">
+            <!-- Category name row -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+              <span style="font-weight:600;font-size:13px;color:var(--text)">${c}</span>
+              <div style="display:flex;align-items:center;gap:8px">
+                ${endLabels}
+                <span style="font-size:18px;font-weight:800;color:var(--accent);line-height:1;margin-left:4px">${n}</span>
+                <span style="font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:1px 7px;font-weight:600">${pct}%</span>
                 <span style="font-size:11px;color:var(--accent)">↗</span>
               </div>
             </div>
-            <div style="height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden">
-              <div style="height:100%;width:${(n/maxC)*100}%;background:linear-gradient(90deg,var(--accent),#4ade80);border-radius:999px"></div>
+            <!-- Stacked progress bar -->
+            <div style="height:12px;background:#e2e8f0;border-radius:999px;overflow:hidden;display:flex">
+              ${segments}
             </div>
           </div>`;
         }).join("")}
       </div>`:"<p style='color:var(--muted);font-size:12px'>No categories with leads yet</p>"}
     </div>
 
+    <!-- Tooltip for segment hover -->
+    <div id="seg-tip" style="display:none;position:fixed;background:#0f172a;color:#f1f5f9;font-size:11px;padding:4px 10px;border-radius:6px;z-index:9999;pointer-events:none"></div>
+
     <!-- Recently Added -->
     ${recent.length?`<div class="card" style="padding:16px"><p style="font-weight:600;font-size:11px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Recently Added</p>
     <div style="overflow-x:auto"><table class="table"><thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Category</th><th>Date</th></tr></thead>
-    <tbody>${recent.map(l=>`<tr style="cursor:pointer" ondblclick="openLF('${l.id}')"><td style="font-weight:500">${l.name}</td><td style="font-family:monospace;color:var(--muted);font-size:11px">${dispPhone(l.phone)}</td><td>${badge(l.status)}</td><td style="color:var(--muted)">${l.category||"—"}</td><td style="color:var(--muted);font-size:11px">${l.created_date||"—"}</td></tr>`).join("")}
+    <tbody>${recent.map(r=>`<tr style="cursor:pointer" ondblclick="openLF('${r.id}')"><td style="font-weight:500">${r.name}</td><td style="font-family:monospace;color:var(--muted);font-size:11px">${dispPhone(r.phone)}</td><td>${badge(r.status)}</td><td style="color:var(--muted)">${r.category||"—"}</td><td style="color:var(--muted);font-size:11px">${r.created_date||"—"}</td></tr>`).join("")}
     </tbody></table></div></div>`:""}
   </div>`;
 }
+
+function showSegTip(el,text){
+  const tip=$("seg-tip");if(!tip)return;
+  tip.textContent=text;tip.style.display="block";
+  document.addEventListener("mousemove",_moveTip);
+}
+function _moveTip(e){const tip=$("seg-tip");if(tip){tip.style.left=(e.clientX+12)+"px";tip.style.top=(e.clientY-28)+"px";}}
+function hideSegTip(){const tip=$("seg-tip");if(tip)tip.style.display="none";document.removeEventListener("mousemove",_moveTip);}
 
 function goFilterFollowup(){
   // Show all leads with follow-up date = today
