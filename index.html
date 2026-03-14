@@ -400,6 +400,29 @@ function renderDash(){
         ${cats.length?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">${cats.map(({c,n})=>`<div style="background:var(--surface);border-radius:9px;padding:10px 12px;border:1.5px solid var(--border);cursor:pointer;transition:all .15s" onclick="goFilter('','${c}')" title="View ${c} leads" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'"><p style="font-size:18px;font-weight:700;color:var(--accent);line-height:1">${n}</p><p style="font-size:10px;color:var(--muted);margin-top:2px">${c} ↗</p></div>`).join("")}</div>`:"<p style='color:var(--muted);font-size:12px'>No data yet</p>"}
       </div>
     </div>
+    <!-- Categories — big horizontal bars -->
+    <div class="card" style="padding:18px;margin-bottom:16px">
+      <p style="font-weight:600;font-size:12px;margin-bottom:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Category Breakdown · tap to filter leads</p>
+      ${cats.length?`<div style="display:flex;flex-direction:column;gap:10px">
+        ${cats.map(({c,n})=>{
+          const pct=Math.round((n/l.length)*100)||0;
+          const maxC=Math.max(...cats.map(x=>x.n),1);
+          return `<div onclick="goFilter('','${c}')" style="cursor:pointer;border-radius:10px;padding:10px 14px;border:1.5px solid var(--border);background:var(--surface);transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.background='#f0fdf4'" onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)'">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+              <span style="font-weight:600;font-size:14px;color:var(--text)">${c}</span>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-size:11px;color:var(--muted)">${pct}%</span>
+                <span style="font-size:22px;font-weight:800;color:var(--accent);line-height:1">${n}</span>
+                <span style="font-size:11px;color:var(--accent)">↗</span>
+              </div>
+            </div>
+            <div style="height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden">
+              <div style="height:100%;width:${(n/maxC)*100}%;background:linear-gradient(90deg,var(--accent),#4ade80);border-radius:999px;transition:width .3s ease"></div>
+            </div>
+          </div>`;
+        }).join("")}
+      </div>`:"<p style='color:var(--muted);font-size:12px'>No categories with leads yet</p>"}
+    </div>
     ${recent.length?`<div class="card" style="padding:16px"><p style="font-weight:600;font-size:12px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Recently Added</p>
     <div style="overflow-x:auto"><table class="table"><thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Category</th><th>Date</th></tr></thead>
     <tbody>${recent.map(l=>`<tr style="cursor:pointer" ondblclick="openLF('${l.id}')"><td style="font-weight:500">${l.name}</td><td style="font-family:monospace;color:var(--muted);font-size:11px">+91 ${l.phone}</td><td>${badge(l.status)}</td><td style="color:var(--muted)">${l.category||"—"}</td><td style="color:var(--muted);font-size:11px">${l.created_date||"—"}</td></tr>`).join("")}
@@ -525,18 +548,21 @@ function renderLeads(){
         </span>
       </div>
 
-      <!-- Row 5: area + maps button (if address exists) -->
-      ${(l.area||l.address)?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;color:var(--muted)">
-        <span>📍 ${l.area||""}${l.area&&l.address?" · ":""}${l.address?l.address.substring(0,35)+(l.address.length>35?"...":""):""}</span>
-        ${(l.address||l.area)?`<button onclick="window.open('https://maps.google.com/?q=${mapsAddr}','_blank')" style="background:#4285f4;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:Sora,sans-serif;flex-shrink:0;margin-left:auto">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-          Maps
-        </button>`:""}
-      </div>`:""}
+      <!-- Row 5: notes shown directly -->
+      ${l.notes?`<div style="font-size:12px;color:var(--muted);padding:7px 10px;background:var(--surface);border-radius:7px;border:1px solid var(--border);line-height:1.5;margin-bottom:6px">📝 ${l.notes}</div>`:""}
 
-      <!-- Row 6: notes (collapsible) -->
-      ${l.notes?`<div onclick="toggleExpandCard('${l.id}',this)" style="cursor:pointer;font-size:11px;color:var(--accent);margin-bottom:4px" id="mcbtn-${l.id}">📝 Show note ▾</div>
-      <div id="mexp-${l.id}" style="display:none;font-size:12px;color:var(--muted);padding:7px 10px;background:var(--surface);border-radius:7px;border:1px solid var(--border);line-height:1.5">${l.notes}</div>`:""}
+      <!-- Row 6: show more → address + maps -->
+      ${(l.area||l.address)?`
+        <div onclick="toggleExpandCard('${l.id}',this)" style="cursor:pointer;font-size:11px;color:var(--accent);display:inline-flex;align-items:center;gap:4px" id="mcbtn-${l.id}">📍 Show address ▾</div>
+        <div id="mexp-${l.id}" style="display:none;margin-top:6px">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)">
+            <span>${l.area||""}${l.area&&l.address?" · ":""}${l.address||""}</span>
+            <button onclick="window.open('https://maps.google.com/?q=${mapsAddr}','_blank')" style="background:#4285f4;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:Sora,sans-serif;flex-shrink:0;margin-left:auto">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+              Maps
+            </button>
+          </div>
+        </div>`:""}
 
     </div>`;
   }).join("");
@@ -567,7 +593,7 @@ function renderLeads(){
     <div class="filter-row" style="display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap">
       <div style="position:relative;flex:1;min-width:160px">
         <span style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px">🔍</span>
-        <input class="input" style="padding-left:28px;font-size:12px" placeholder="Search name, phone, area, notes..." value="${f.search}" oninput="lFil('search',this.value)">
+        <input id="search-inp" class="input" style="padding-left:28px;font-size:12px" placeholder="Search name, phone, area, notes..." value="${f.search}" oninput="lSearch(this.value)">
       </div>
       <select class="input" style="width:auto;padding:8px 9px;font-size:12px;cursor:pointer" onchange="lFil('status',this.value)">
         <option value="all" ${f.status==="all"?"selected":""}>All Status</option>
@@ -626,6 +652,18 @@ function lFil(k,v){S.f[k]=v;if(k!=="showAll")S.f.page=1;render();}
 function lSort(k){if(S.f.sort===k)S.f.dir=S.f.dir==="asc"?"desc":"asc";else{S.f.sort=k;S.f.dir="asc";}render();}
 function lPage(p){S.f.page=p;render();}
 function togAll(c){const all=filtL();if(c)all.forEach(l=>S.sel.add(l.id));else S.sel.clear();render();}
+
+// Debounced search — lets user type freely, searches after 350ms pause
+let _searchTimer=null;
+function lSearch(v){
+  // Update state immediately so value stays in input
+  S.f.search=v;S.f.page=1;
+  clearTimeout(_searchTimer);
+  _searchTimer=setTimeout(()=>render(),350);
+  // Keep input value in sync without full re-render
+  const inp=document.getElementById("search-inp");
+  if(inp&&inp.value!==v)inp.value=v;
+}
 
 // Expand/collapse hidden details (desktop)
 function toggleExpand(id){
