@@ -414,12 +414,6 @@ function renderDash(){
   const recent=[...l].sort((a,b)=>(b.created_date||"").localeCompare(a.created_date||"")).slice(0,5);
   const q=getDailyQuote();
 
-  // For each category, compute per-status counts (for stacked bar)
-  function catStatusBreakdown(catName){
-    const catLeads=l.filter(x=>hasCategory(x,catName));
-    return STATUSES.map(s=>({s,n:catLeads.filter(x=>x.status===s).length,c:SC[s]})).filter(d=>d.n>0);
-  }
-
   return `<div class="fade" style="padding-top:6px">
 
     <!-- Header: title + date + subtle quote + add button -->
@@ -466,15 +460,29 @@ function renderDash(){
     <!-- Status distribution + Quick actions -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
       <div class="card" style="padding:16px">
-        <p style="font-weight:600;font-size:11px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Status Distribution</p>
-        ${dist.length?dist.map(({s,n,c})=>`<div style="margin-bottom:9px;cursor:pointer;border-radius:6px;padding:3px 4px" onclick="goFilter('${s}','')">
-          <div style="display:flex;justify-content:space-between;margin-bottom:3px">
-            <span style="font-size:11px;color:var(--muted)">${s}</span>
-            <span style="font-size:11px;font-weight:600;color:${c}">${n} ↗</span>
-          </div>
-          <div style="height:5px;background:var(--surface);border-radius:999px">
-            <div style="height:100%;width:${(n/maxN)*100}%;background:${c};border-radius:999px"></div>
-          </div></div>`).join(""):"<p style='color:var(--muted);font-size:12px'>No data yet</p>"}
+        <p style="font-weight:600;font-size:11px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Status Distribution <span style="font-size:9px;color:var(--accent);font-weight:400">· tap to filter</span></p>
+        ${dist.length?dist.map(({s,n,c})=>{
+          const pct=l.length?Math.round((n/l.length)*100):0;
+          return `<div onclick="goFilter('${s}','')"
+            style="margin-bottom:8px;cursor:pointer;border-radius:8px;padding:6px 8px;border:1.5px solid transparent;transition:all .15s"
+            onmouseover="this.style.background='#f0fdf4';this.style.borderColor='${c}33'"
+            onmouseout="this.style.background='';this.style.borderColor='transparent'">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="width:9px;height:9px;border-radius:2px;background:${c};display:inline-block;flex-shrink:0"></span>
+                <span style="font-size:12px;color:var(--text);font-weight:500">${s}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:10px;color:var(--muted)">${pct}%</span>
+                <span style="font-size:13px;font-weight:700;color:${c}">${n}</span>
+                <span style="font-size:10px;color:var(--accent)">↗</span>
+              </div>
+            </div>
+            <div style="height:4px;background:var(--surface);border-radius:999px;overflow:hidden">
+              <div style="height:100%;width:${(n/maxN)*100}%;background:${c};border-radius:999px"></div>
+            </div>
+          </div>`;
+        }).join(""):"<p style='color:var(--muted);font-size:12px'>No data yet</p>"}
       </div>
       <div class="card" style="padding:16px">
         <p style="font-weight:600;font-size:11px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Quick Filters</p>
@@ -486,44 +494,54 @@ function renderDash(){
 
     <!-- Category Breakdown with stacked status bars -->
     <div class="card" style="padding:18px;margin-bottom:14px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <p style="font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Category Breakdown · tap to filter</p>
-        <!-- Status legend -->
-        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <p style="font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Category Breakdown <span style="font-size:9px;color:var(--accent);font-weight:400">· tap row = all leads in category · tap colour = filter by status too</span></p>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
           ${STATUSES.map(s=>`<span style="display:inline-flex;align-items:center;gap:3px;font-size:9px;color:var(--muted)">
             <span style="width:8px;height:8px;border-radius:2px;background:${SC[s]};flex-shrink:0;display:inline-block"></span>${s}
           </span>`).join("")}
         </div>
       </div>
-      ${cats.length?`<div style="display:flex;flex-direction:column;gap:12px">
+      ${cats.length?`<div style="display:flex;flex-direction:column;gap:14px">
         ${cats.map(({c,n})=>{
-          const pct=l.length?Math.round((n/l.length)*100):0;
-          const breakdown=catStatusBreakdown(c);
-          // Build stacked bar segments
-          const segments=breakdown.map(({s,n:sn,c:sc})=>{
-            const w=n>0?Math.round((sn/n)*100):0;
-            const spct=Math.round((sn/n)*100);
-            return `<div title="${s}: ${sn} (${spct}%)" style="height:100%;width:${w}%;background:${sc};position:relative;transition:width .4s ease;min-width:${sn>0?'2px':'0'}" onmouseover="showSegTip(this,'${s}: ${sn} (${spct}%)')" onmouseout="hideSegTip()"></div>`;
+          // Get exact per-status counts for this category
+          const catLeads=l.filter(x=>hasCategory(x,c));
+          const total=catLeads.length; // use catLeads.length, not n, to avoid any discrepancy
+          const breakdown=STATUSES
+            .map(s=>({s,n:catLeads.filter(x=>x.status===s).length,col:SC[s]}))
+            .filter(d=>d.n>0);
+          const pctOfAll=l.length?Math.round((total/l.length)*100):0;
+
+          // Stacked bar using flex — avoids rounding gaps, last segment fills remainder
+          const segments=breakdown.map(({s,n:sn,col},i)=>{
+            const pct=(total>0?(sn/total)*100:0).toFixed(2);
+            const isLast=i===breakdown.length-1;
+            return `<div onclick="event.stopPropagation();goFilter('${s}','${c}')"
+              title="${s}: ${sn} leads in ${c}"
+              style="height:100%;${isLast?'flex:1':'flex:'+pct};background:${col};min-width:${sn>0?'3px':'0'};cursor:pointer;transition:opacity .15s"
+              onmouseover="this.style.opacity='.75';showSegTip(this,'${s}: ${sn} (${total>0?Math.round((sn/total)*100):0}%)')"
+              onmouseout="this.style.opacity='1';hideSegTip()"></div>`;
           }).join("");
-          // End labels: show each status count
-          const endLabels=breakdown.map(({s,n:sn,c:sc})=>
-            `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;color:${sc}">
-              <span style="width:7px;height:7px;border-radius:1px;background:${sc};display:inline-block"></span>${sn}
-            </span>`
+
+          // Status count badges
+          const badges=breakdown.map(({s,n:sn,col})=>
+            `<span onclick="event.stopPropagation();goFilter('${s}','${c}')"
+              title="Filter: ${c} + ${s}"
+              style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:${col};cursor:pointer;padding:2px 5px;border-radius:5px;border:1px solid ${col}33;transition:background .12s"
+              onmouseover="this.style.background='${col}18'" onmouseout="this.style.background=''">${sn}</span>`
           ).join("");
-          return `<div onclick="goFilter('','${c}')" style="cursor:pointer">
-            <!-- Category name row -->
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+
+          return `<div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;cursor:pointer" onclick="goFilter('','${c}')">
               <span style="font-weight:600;font-size:13px;color:var(--text)">${c}</span>
-              <div style="display:flex;align-items:center;gap:8px">
-                ${endLabels}
-                <span style="font-size:18px;font-weight:800;color:var(--accent);line-height:1;margin-left:4px">${n}</span>
-                <span style="font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:1px 7px;font-weight:600">${pct}%</span>
-                <span style="font-size:11px;color:var(--accent)">↗</span>
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+                ${badges}
+                <span style="font-size:19px;font-weight:800;color:var(--accent);line-height:1;margin-left:2px">${total}</span>
+                <span style="font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:1px 8px;font-weight:600">${pctOfAll}%</span>
+                <span style="font-size:10px;color:var(--accent)">↗</span>
               </div>
             </div>
-            <!-- Stacked progress bar -->
-            <div style="height:12px;background:#e2e8f0;border-radius:999px;overflow:hidden;display:flex">
+            <div style="height:13px;background:#e2e8f0;border-radius:999px;overflow:hidden;display:flex;cursor:pointer" onclick="goFilter('','${c}')">
               ${segments}
             </div>
           </div>`;
@@ -532,7 +550,7 @@ function renderDash(){
     </div>
 
     <!-- Tooltip for segment hover -->
-    <div id="seg-tip" style="display:none;position:fixed;background:#0f172a;color:#f1f5f9;font-size:11px;padding:4px 10px;border-radius:6px;z-index:9999;pointer-events:none"></div>
+    <div id="seg-tip" style="display:none;position:fixed;background:#0f172a;color:#f1f5f9;font-size:11px;padding:4px 10px;border-radius:6px;z-index:9999;pointer-events:none;white-space:nowrap"></div>
 
     <!-- Recently Added -->
     ${recent.length?`<div class="card" style="padding:16px"><p style="font-weight:600;font-size:11px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Recently Added</p>
