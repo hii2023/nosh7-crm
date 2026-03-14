@@ -220,14 +220,55 @@ const api={
 // ── STATE ────────────────────────────────────────────────────────────────────
 const S={
   leads:[],templates:[],categories:[],
-  tab:"leads",                          // ← Default: leads
+  tgroups:{},        // template groups: { groupName: [templateId,...] }
+  tab:"leads",
   f:{search:"",status:"all",category:"all",sort:"created_date",dir:"desc",page:1,showAll:false},
   sel:new Set(),sbOpen:true
 };
 
 const STATUSES=["New","Contacted","Interested","Follow Up","Converted","Not Interested","Lost"];
 const SC={New:"#3b82f6",Contacted:"#10b981",Interested:"#8b5cf6","Follow Up":"#f59e0b",Converted:"#22c55e","Not Interested":"#ef4444",Lost:"#94a3b8"};
-const PER=20;                           // ← 20 per page default
+const PER=20;
+
+// Sales quotes — one per day (rotates by day of year)
+const SALES_QUOTES=[
+  {q:"Every no gets you closer to a yes.",a:"Sales Wisdom"},
+  {q:"People don't buy products, they buy feelings.",a:"Seth Godin"},
+  {q:"Follow up until they buy or die.",a:"Sales Rule"},
+  {q:"You don't close a sale, you open a relationship.",a:"Patricia Fripp"},
+  {q:"The best salespeople listen more than they talk.",a:"Sales Wisdom"},
+  {q:"Speed is the new currency. Reply fast.",a:"Sales Wisdom"},
+  {q:"A referral is worth 10 cold leads. Ask for it.",a:"Sales Wisdom"},
+  {q:"Your attitude, not your aptitude, determines your altitude.",a:"Zig Ziglar"},
+  {q:"If you are not taking care of your customer, your competitor will.",a:"Bob Hooey"},
+  {q:"Success in sales = daily habits done consistently.",a:"Sales Wisdom"},
+  {q:"ABC — Always Be Connecting. People buy from people they like.",a:"Sales Wisdom"},
+  {q:"The secret of getting ahead is getting started.",a:"Mark Twain"},
+  {q:"Every sale is a conversation, not a pitch.",a:"Sales Wisdom"},
+  {q:"One follow-up is courteous. Five is how deals get closed.",a:"Sales Wisdom"},
+  {q:"Don't sell the product. Solve the problem.",a:"Sales Wisdom"},
+  {q:"Trust is built in drops, lost in buckets.",a:"Kevin Plank"},
+  {q:"The goal is not to sell to everyone. It's to serve the right one well.",a:"Sales Wisdom"},
+  {q:"Call at different times. The person who never picks up at noon might answer at 8am.",a:"Sales Wisdom"},
+  {q:"Your pipeline is your future. Fill it daily.",a:"Sales Wisdom"},
+  {q:"Enthusiasm is one of the most powerful engines of success.",a:"Ralph Waldo Emerson"},
+  {q:"The top 20% of salespeople get 80% of the results. Be consistent.",a:"Pareto Wisdom"},
+  {q:"Rejection is redirection. Keep going.",a:"Sales Wisdom"},
+  {q:"Know your customer's pain before pitching your solution.",a:"Sales Wisdom"},
+  {q:"A confused mind always says no. Keep your message simple.",a:"Sales Wisdom"},
+  {q:"Win the morning, win the day. Plan your calls before 10am.",a:"Sales Wisdom"},
+  {q:"Your follow-up today is your revenue tomorrow.",a:"NOSH7 Tip"},
+  {q:"Data beats gut feeling. Track every interaction.",a:"Sales Wisdom"},
+  {q:"The best time to plant a tree was 20 years ago. The second best time is now.",a:"Proverb"},
+  {q:"Sell the value, not the price. Price is forgotten, value is remembered.",a:"Sales Wisdom"},
+  {q:"A warm lead ignored is a customer won by your competitor.",a:"Sales Wisdom"},
+  {q:"Consistency beats intensity. Show up every day.",a:"Sales Wisdom"},
+];
+function getDailyQuote(){
+  const d=new Date();
+  const doy=Math.floor((d-new Date(d.getFullYear(),0,0))/(1000*60*60*24));
+  return SALES_QUOTES[doy%SALES_QUOTES.length];
+}
 const DEF_T=[
   {id:"t1",name:"Initial Greeting",message:"Hello {name}! 👋 I came across your inquiry and would love to help. When is a good time to connect?"},
   {id:"t2",name:"Follow Up",message:"Hi {name}, just following up on our last conversation. Any questions? Happy to help! 😊"},
@@ -320,6 +361,7 @@ function go(tab){
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 async function init(){
+  loadGroups();
   initSB();
   try{
     const[leads,tpls,cats]=await Promise.all([
@@ -355,58 +397,90 @@ function renderBulkBar(){
   else{bar.classList.remove("show");main?.classList.remove("has-bulk");}
 }
 
-// ── DASHBOARD ────────────────────────────────────────────────────────────────
-function goFilter(status,category){
-  S.f.status=status||"all";S.f.category=category||"all";S.f.page=1;
-  go("leads");
-}
 function renderDash(){
   const l=S.leads,t=today();
+  const fuToday=l.filter(x=>x.follow_up_date===t);
+  const noFollowup=l.filter(x=>x.status!=="New"&&x.status!=="Converted"&&x.status!=="Lost"&&!x.follow_up_date);
   const st=[
-    {lbl:"Total Leads",v:l.length,c:"#22c55e",tip:""},
+    {lbl:"Total Leads",v:l.length,c:"#22c55e"},
     {lbl:"New",v:l.filter(x=>x.status==="New").length,c:"#3b82f6",status:"New"},
     {lbl:"Interested",v:l.filter(x=>x.status==="Interested").length,c:"#8b5cf6",status:"Interested"},
-    {lbl:"Follow-up Today",v:l.filter(x=>x.follow_up_date===t).length,c:"#f59e0b",tip:""},
+    {lbl:"Follow-up Today",v:fuToday.length,c:"#f59e0b",action:"fuToday"},
     {lbl:"Converted",v:l.filter(x=>x.status==="Converted").length,c:"#22c55e",status:"Converted"},
   ];
   const dist=STATUSES.map(s=>({s,n:l.filter(x=>x.status===s).length,c:SC[s]})).filter(d=>d.n>0);
   const maxN=Math.max(...dist.map(d=>d.n),1);
-  // Multi-cat aware count: a lead with "A, B" counts for both A and B
   const cats=S.categories.map(c=>({c,n:l.filter(x=>hasCategory(x,c)).length})).filter(x=>x.n>0);
+  const maxC=Math.max(...cats.map(x=>x.n),1);
   const recent=[...l].sort((a,b)=>(b.created_date||"").localeCompare(a.created_date||"")).slice(0,5);
+  const q=getDailyQuote();
   return `<div class="fade" style="padding-top:6px">
-    <div style="margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-start">
-      <div><h1 class="page-title" style="font-size:21px;font-weight:700;margin-top:30px">Dashboard</h1>
-      <p style="color:var(--muted);font-size:12px;margin-top:2px">${new Date().toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</p></div>
+
+    <!-- Header row with quote -->
+    <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+      <div>
+        <h1 class="page-title" style="font-size:21px;font-weight:700;margin-top:30px">Dashboard</h1>
+        <p style="color:var(--muted);font-size:12px;margin-top:2px">${new Date().toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</p>
+      </div>
+      <!-- Daily Sales Quote -->
+      <div style="flex:1;min-width:220px;max-width:420px;margin-top:30px;background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:12px;padding:12px 16px;border:1px solid #334155">
+        <p style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#4ade80;font-weight:600;margin-bottom:5px">💡 Daily Sales Tip</p>
+        <p style="font-size:12px;color:#f1f5f9;line-height:1.5;font-style:italic">"${q.q}"</p>
+        <p style="font-size:10px;color:#64748b;margin-top:5px;text-align:right">— ${q.a}</p>
+      </div>
       <button class="btn btn-p btn-sm" onclick="openLF()" style="margin-top:30px;flex-shrink:0">＋ Add Lead</button>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-      ${st.map(s=>`<div class="stat ${s.status?"cl":""}" ${s.status?`onclick="goFilter('${s.status}','')" title="View ${s.lbl} leads"`:""}><p style="color:var(--muted);font-size:10px;margin-bottom:4px;font-weight:500">${s.lbl}${s.status?` <span style='font-size:9px'>↗</span>`:""}</p><p style="font-size:26px;font-weight:700;color:${s.c};line-height:1">${s.v}</p></div>`).join("")}
+
+    <!-- Stat cards -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      ${st.map(s=>{
+        const clickable=s.status||s.action;
+        const onclick=s.status?`goFilter('${s.status}','')`:s.action==="fuToday"?`goFilterFollowup()`:""
+        return `<div class="stat ${clickable?"cl":""}" ${clickable?`onclick="${onclick}"`:""}
+          style="${clickable?"cursor:pointer":""}">
+          <p style="color:var(--muted);font-size:10px;margin-bottom:4px;font-weight:500">${s.lbl}${clickable?` <span style='font-size:9px'>↗</span>`:""}</p>
+          <p style="font-size:26px;font-weight:700;color:${s.c};line-height:1">${s.v}</p>
+        </div>`;
+      }).join("")}
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+
+    <!-- Alert: leads without follow-up date -->
+    ${noFollowup.length?`<div onclick="goFilterNoFollowup()" style="cursor:pointer;margin-bottom:14px;padding:11px 16px;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:11px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:20px">⚠️</span>
+      <div style="flex:1">
+        <p style="font-size:13px;font-weight:600;color:#b91c1c">${noFollowup.length} active leads without a follow-up date</p>
+        <p style="font-size:11px;color:#ef4444;margin-top:2px">Status: Contacted/Interested/Follow Up — no callback date set · tap to view</p>
+      </div>
+      <span style="font-size:12px;color:#ef4444;font-weight:700">↗</span>
+    </div>`:""}
+
+    <!-- Status + Category side by side -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
       <div class="card" style="padding:16px">
-        <p style="font-weight:600;font-size:12px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Status · click to filter</p>
-        ${dist.length?dist.map(({s,n,c})=>`<div style="margin-bottom:9px;cursor:pointer;border-radius:6px;padding:3px 4px" onclick="goFilter('${s}','')" title="View ${s} leads">
+        <p style="font-weight:600;font-size:11px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Status Distribution</p>
+        ${dist.length?dist.map(({s,n,c})=>`<div style="margin-bottom:9px;cursor:pointer;border-radius:6px;padding:3px 4px" onclick="goFilter('${s}','')">
           <div style="display:flex;justify-content:space-between;margin-bottom:3px">
             <span style="font-size:11px;color:var(--muted)">${s}</span>
             <span style="font-size:11px;font-weight:600;color:${c}">${n} ↗</span>
           </div>
-          <div style="height:5px;background:var(--surface);border-radius:999px;border:1px solid var(--border)">
+          <div style="height:5px;background:var(--surface);border-radius:999px">
             <div style="height:100%;width:${(n/maxN)*100}%;background:${c};border-radius:999px"></div>
           </div></div>`).join(""):"<p style='color:var(--muted);font-size:12px'>No data yet</p>"}
       </div>
       <div class="card" style="padding:16px">
-        <p style="font-weight:600;font-size:12px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Categories · click to filter</p>
-        ${cats.length?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">${cats.map(({c,n})=>`<div style="background:var(--surface);border-radius:9px;padding:10px 12px;border:1.5px solid var(--border);cursor:pointer;transition:all .15s" onclick="goFilter('','${c}')" title="View ${c} leads" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'"><p style="font-size:18px;font-weight:700;color:var(--accent);line-height:1">${n}</p><p style="font-size:10px;color:var(--muted);margin-top:2px">${c} ↗</p></div>`).join("")}</div>`:"<p style='color:var(--muted);font-size:12px'>No data yet</p>"}
+        <p style="font-weight:600;font-size:11px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Quick Actions</p>
+        <button onclick="goFilter('New','')" class="btn btn-s" style="width:100%;justify-content:space-between;margin-bottom:7px;font-size:12px">New Leads <span style="color:#3b82f6;font-weight:700">${l.filter(x=>x.status==="New").length}</span></button>
+        <button onclick="goFilterFollowup()" class="btn btn-s" style="width:100%;justify-content:space-between;margin-bottom:7px;font-size:12px">Follow-up Today <span style="color:#f59e0b;font-weight:700">${fuToday.length}</span></button>
+        <button onclick="goFilterNoFollowup()" class="btn btn-s" style="width:100%;justify-content:space-between;font-size:12px;${noFollowup.length?"border-color:#fca5a5;color:#b91c1c":""}">No Follow-up Set <span style="color:#ef4444;font-weight:700">${noFollowup.length}</span></button>
       </div>
     </div>
-    <!-- Categories — big horizontal bars -->
-    <div class="card" style="padding:18px;margin-bottom:16px">
-      <p style="font-weight:600;font-size:12px;margin-bottom:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Category Breakdown · tap to filter leads</p>
-      ${cats.length?`<div style="display:flex;flex-direction:column;gap:10px">
+
+    <!-- Category horizontal bars (full width) -->
+    <div class="card" style="padding:18px;margin-bottom:14px">
+      <p style="font-weight:600;font-size:11px;margin-bottom:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Category Breakdown · tap to filter</p>
+      ${cats.length?`<div style="display:flex;flex-direction:column;gap:9px">
         ${cats.map(({c,n})=>{
-          const pct=Math.round((n/l.length)*100)||0;
-          const maxC=Math.max(...cats.map(x=>x.n),1);
+          const pct=l.length?Math.round((n/l.length)*100):0;
           return `<div onclick="goFilter('','${c}')" style="cursor:pointer;border-radius:10px;padding:10px 14px;border:1.5px solid var(--border);background:var(--surface);transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.background='#f0fdf4'" onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)'">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
               <span style="font-weight:600;font-size:14px;color:var(--text)">${c}</span>
@@ -417,17 +491,33 @@ function renderDash(){
               </div>
             </div>
             <div style="height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden">
-              <div style="height:100%;width:${(n/maxC)*100}%;background:linear-gradient(90deg,var(--accent),#4ade80);border-radius:999px;transition:width .3s ease"></div>
+              <div style="height:100%;width:${(n/maxC)*100}%;background:linear-gradient(90deg,var(--accent),#4ade80);border-radius:999px"></div>
             </div>
           </div>`;
         }).join("")}
       </div>`:"<p style='color:var(--muted);font-size:12px'>No categories with leads yet</p>"}
     </div>
-    ${recent.length?`<div class="card" style="padding:16px"><p style="font-weight:600;font-size:12px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Recently Added</p>
+
+    <!-- Recently Added -->
+    ${recent.length?`<div class="card" style="padding:16px"><p style="font-weight:600;font-size:11px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Recently Added</p>
     <div style="overflow-x:auto"><table class="table"><thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Category</th><th>Date</th></tr></thead>
-    <tbody>${recent.map(l=>`<tr style="cursor:pointer" ondblclick="openLF('${l.id}')"><td style="font-weight:500">${l.name}</td><td style="font-family:monospace;color:var(--muted);font-size:11px">+91 ${l.phone}</td><td>${badge(l.status)}</td><td style="color:var(--muted)">${l.category||"—"}</td><td style="color:var(--muted);font-size:11px">${l.created_date||"—"}</td></tr>`).join("")}
+    <tbody>${recent.map(l=>`<tr style="cursor:pointer" ondblclick="openLF('${l.id}')"><td style="font-weight:500">${l.name}</td><td style="font-family:monospace;color:var(--muted);font-size:11px">${dispPhone(l.phone)}</td><td>${badge(l.status)}</td><td style="color:var(--muted)">${l.category||"—"}</td><td style="color:var(--muted);font-size:11px">${l.created_date||"—"}</td></tr>`).join("")}
     </tbody></table></div></div>`:""}
   </div>`;
+}
+
+function goFilterFollowup(){
+  // Show all leads with follow-up date = today
+  S.f.status="all";S.f.category="all";S.f.search="";S.f.page=1;
+  go("leads");
+  // Apply custom filter by overriding filtL temporarily
+  S._customFilter="followup_today";
+  render();
+}
+function goFilterNoFollowup(){
+  S.f.status="all";S.f.category="all";S.f.search="";S.f.page=1;
+  S._customFilter="no_followup";
+  go("leads");
 }
 
 // ── LEADS ────────────────────────────────────────────────────────────────────
@@ -443,6 +533,13 @@ function hasCategory(l,cat){
 
 function filtL(){
   const f=S.f;let r=[...S.leads];
+  // Custom dashboard filters override normal filters
+  if(S._customFilter==="followup_today"){
+    const t=today();return r.filter(x=>x.follow_up_date===t);
+  }
+  if(S._customFilter==="no_followup"){
+    return r.filter(x=>x.status!=="New"&&x.status!=="Converted"&&x.status!=="Lost"&&!x.follow_up_date);
+  }
   if(f.search){const q=f.search.toLowerCase();r=r.filter(l=>(l.name||"").toLowerCase().includes(q)||(l.phone||"").includes(q)||(l.email||"").toLowerCase().includes(q)||(l.area||"").toLowerCase().includes(q)||(l.category||"").toLowerCase().includes(q)||(l.notes||"").toLowerCase().includes(q));}
   if(f.status!=="all")r=r.filter(l=>l.status===f.status);
   if(f.category!=="all")r=r.filter(l=>hasCategory(l,f.category));
@@ -467,18 +564,19 @@ function renderLeads(){
     pgHtml+=`<button class="btn btn-s btn-sm" onclick="lPage(${Math.min(pages,f.page+1)})" ${f.page===pages?"disabled":""}>›</button>`;
   }
 
-  // Desktop table rows — area/address/notes collapsed, email/website as icons
+  // Desktop table rows — notes visible, address/area behind expand
   const tRows=paged.flatMap(l=>{
     const sel=S.sel.has(l.id),od=l.follow_up_date&&l.follow_up_date<today();
-    const hasExtra=!!(l.area||l.address||l.notes);
+    const hasExtra=!!(l.area||l.address);
     return [
       `<tr data-id="${l.id}" style="background:${sel?"#f0fdf4":""};cursor:pointer" ondblclick="openLF('${l.id}')" title="Double-click to edit">
         <td><input type="checkbox" ${sel?"checked":""} onchange="toggleOne('${l.id}',this.checked)" style="accent-color:var(--accent);cursor:pointer;width:14px;height:14px"></td>
         <td>
           <div style="font-weight:600;display:flex;align-items:center;gap:6px">
             ${l.name}
-            ${hasExtra?`<button class="ab" title="More details" onclick="event.stopPropagation();toggleExpand('${l.id}')" style="font-size:11px;padding:1px 5px;color:var(--accent);border:1px solid var(--accent);border-radius:4px;line-height:1.4" id="expbtn-${l.id}">▾</button>`:""}
+            ${hasExtra?`<button class="ab" title="Address" onclick="event.stopPropagation();toggleExpand('${l.id}')" style="font-size:11px;padding:1px 5px;color:#4285f4;border:1px solid #bfdbfe;border-radius:4px;line-height:1.4" id="expbtn-${l.id}">📍</button>`:""}
           </div>
+          ${l.notes?`<div style="font-size:11px;color:var(--muted);margin-top:3px;max-width:160px;line-height:1.4">${l.notes.substring(0,60)}${l.notes.length>60?"…":""}</div>`:""}
         </td>
         <td>
           <div style="font-family:monospace;color:var(--muted);font-size:11px;margin-bottom:4px">${dispPhone(l.phone)}</div>
@@ -491,21 +589,19 @@ function renderLeads(){
         </td>
         <td onclick="event.stopPropagation();quickStatusPick('${l.id}')" title="Click to change status" style="cursor:pointer">${badge(l.status)}<div style="font-size:9px;color:var(--muted);margin-top:2px;text-align:center">tap ✎</div></td>
         <td onclick="event.stopPropagation();quickCategoryPick('${l.id}')" title="Click to change category" style="cursor:pointer;color:var(--muted);font-size:12px">${l.category||"—"}<div style="font-size:9px;color:var(--accent);margin-top:1px">tap ✎</div></td>
-        <td onclick="event.stopPropagation();quickFollowupPick('${l.id}')" title="Click to set follow-up date" style="cursor:pointer;color:${od?"#ef4444":l.follow_up_date?"#f59e0b":"var(--muted)"};font-size:11px">${l.follow_up_date||"set date"}<div style="font-size:9px;color:var(--accent);margin-top:1px">tap ✎</div></td>
+        <td onclick="event.stopPropagation();quickFollowupPick('${l.id}')" title="Click to set follow-up" style="cursor:pointer;color:${od?"#ef4444":l.follow_up_date?"#f59e0b":"var(--muted)"};font-size:11px">${l.follow_up_date||"set"}<div style="font-size:9px;color:var(--accent);margin-top:1px">tap ✎</div></td>
         <td style="color:var(--muted);font-size:11px">${l.last_contacted||"—"}</td>
         <td><button class="ab" title="Delete" onclick="event.stopPropagation();delLead('${l.id}')">🗑</button></td>
       </tr>`,
-      // Expandable detail row
-      `<tr id="exp-${l.id}" style="display:none;background:#f8fafc">
-        <td colspan="8" style="padding:8px 14px 12px 46px;font-size:12px;color:var(--muted);border-bottom:1.5px solid var(--border)">
+      `<tr id="exp-${l.id}" style="display:none;background:#f0f9ff">
+        <td colspan="8" style="padding:8px 14px 12px 46px;font-size:12px;border-bottom:1.5px solid var(--border)">
           <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
-            ${l.area?`<span>📍 <strong style="color:var(--text)">${l.area}</strong></span>`:""}
-            ${l.address?`<span>🏠 <strong style="color:var(--text)">${l.address}</strong></span>
-              <button onclick="openMaps('${(l.address+(l.area?", "+l.area:"")).replace(/'/g,"\\'")}','${l.id}')" style="background:#4285f4;color:#fff;border:none;border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:Sora,sans-serif">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                Maps
-              </button>`:""}
-            ${l.notes?`<span style="flex:1;min-width:200px">📝 ${l.notes}</span>`:""}
+            ${l.area?`<span style="color:var(--muted)">📍 <strong style="color:var(--text)">${l.area}</strong></span>`:""}
+            ${l.address?`<span style="color:var(--muted)">🏠 <strong style="color:var(--text)">${l.address}</strong></span>`:""}
+            ${(l.address||l.area)?`<button onclick="openMaps('',event,'${l.id}')" style="background:#4285f4;color:#fff;border:none;border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-family:Sora,sans-serif">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+              Open Maps
+            </button>`:""}
           </div>
         </td>
       </tr>`
@@ -648,21 +744,21 @@ function renderLeads(){
   </div>`;
 }
 
-function lFil(k,v){S.f[k]=v;if(k!=="showAll")S.f.page=1;render();}
+function lFil(k,v){S.f[k]=v;S._customFilter=null;if(k!=="showAll")S.f.page=1;render();}
 function lSort(k){if(S.f.sort===k)S.f.dir=S.f.dir==="asc"?"desc":"asc";else{S.f.sort=k;S.f.dir="asc";}render();}
 function lPage(p){S.f.page=p;render();}
 function togAll(c){const all=filtL();if(c)all.forEach(l=>S.sel.add(l.id));else S.sel.clear();render();}
 
-// Debounced search — lets user type freely, searches after 350ms pause
+// Smart search: fires immediately if cleared, fires after 4+ chars, debounces 400ms
 let _searchTimer=null;
 function lSearch(v){
-  // Update state immediately so value stays in input
-  S.f.search=v;S.f.page=1;
+  S.f.search=v;S.f.page=1;S._customFilter=null;
   clearTimeout(_searchTimer);
-  _searchTimer=setTimeout(()=>render(),350);
-  // Keep input value in sync without full re-render
-  const inp=document.getElementById("search-inp");
-  if(inp&&inp.value!==v)inp.value=v;
+  if(!v||v.length>=4){
+    // Search immediately on clear or 4+ chars
+    _searchTimer=setTimeout(()=>render(),300);
+  }
+  // Don't re-render for 1–3 chars, just keep typing
 }
 
 // Expand/collapse hidden details (desktop)
@@ -790,9 +886,11 @@ async function quickStatusSave(id,status){
   }catch(e){toast("Error: "+e.message,"err");}
 }
 
-// Google Maps opener
-function openMaps(addr,id){
-  const l=S.leads.find(x=>x.id===id);
+function openMaps(addr,evtOrId,id2){
+  // Called as openMaps(addr, id) from mobile or openMaps('', event, id) from desktop
+  let leadId=id2||evtOrId;
+  if(evtOrId&&evtOrId.stopPropagation)evtOrId.stopPropagation();
+  const l=S.leads.find(x=>x.id===leadId);
   const q=addr||(l?(l.address||"")+(l.area?", "+l.area:""):"");
   window.open(`https://maps.google.com/?q=${encodeURIComponent(q+", Ahmedabad, Gujarat")}`, "_blank");
 }
@@ -1309,34 +1407,145 @@ async function sendEmail(id){
 
 // ── TEMPLATES ─────────────────────────────────────────────────────────────────
 function renderTpls(){
+  // Build group map from S.tgroups (stored in localStorage)
+  const grps=S.tgroups||{};
+  // Collect all grouped template IDs
+  const groupedIds=new Set(Object.values(grps).flat());
+  // Ungrouped templates
+  const ungrouped=S.templates.filter(t=>!groupedIds.has(t.id));
+  const groupNames=Object.keys(grps);
+
   return `<div class="fade" style="padding-top:6px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;margin-top:30px;flex-wrap:wrap;gap:8px">
       <div><h1 class="page-title" style="font-size:21px;font-weight:700">Templates</h1>
-        <p style="color:var(--muted);font-size:12px">WhatsApp & Email templates · double-click card to edit · use {name} to personalize</p></div>
+        <p style="color:var(--muted);font-size:12px">Double-click to edit · use {name} to personalize · groups keep related templates together</p></div>
       <div style="display:flex;gap:7px;flex-wrap:wrap">
         <label class="btn btn-s btn-sm" style="cursor:pointer">📂 Bulk Upload
           <input type="file" accept=".csv,.xls,.xlsx" onchange="importTemplates(event)" style="display:none">
         </label>
+        <button class="btn btn-s btn-sm" onclick="openGroupF()">＋ New Group</button>
         <button class="btn btn-p btn-sm" onclick="openTF()">＋ New Template</button>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:11px">
-      ${S.templates.map(t=>`<div class="card" style="padding:15px;cursor:pointer" ondblclick="openTF('${t.id}')" title="Double-click to edit">
+
+    <!-- Groups -->
+    ${groupNames.map(gName=>{
+      const tids=grps[gName]||[];
+      const gtpls=tids.map(tid=>S.templates.find(t=>t.id===tid)).filter(Boolean);
+      return `<div class="card" style="padding:16px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <span style="font-size:18px">📁</span>
+          <span style="font-weight:700;font-size:14px;flex:1">${gName}</span>
+          <span style="font-size:11px;color:var(--muted)">${gtpls.length} templates</span>
+          <button class="ab" onclick="addToGroup('${gName.replace(/'/g,"\\'")}');" title="Add template to group" style="font-size:12px;border:1px solid var(--accent);color:var(--accent);padding:2px 8px;border-radius:6px">＋</button>
+          <button class="ab" onclick="delGroup('${gName.replace(/'/g,"\\'")}');" title="Delete group" style="color:var(--red)">🗑</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:9px">
+          ${gtpls.length?gtpls.map(t=>`<div class="card" style="padding:13px;cursor:pointer;border-color:#e0f2fe" ondblclick="openTF('${t.id}')" title="Double-click to edit">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px">
+              <div style="flex:1;min-width:0">
+                <p style="font-weight:700;font-size:12px;margin-bottom:2px">${t.name}</p>
+                ${t.subject?`<p style="font-size:10px;color:#e8a838">📧 ${t.subject}</p>`:""}
+              </div>
+              <div style="display:flex;gap:2px">
+                <button class="ab" onclick="event.stopPropagation();removeFromGroup('${gName.replace(/'/g,"\\'")}','${t.id}')" title="Remove from group" style="font-size:10px;padding:2px 5px;color:var(--muted)">✕</button>
+                <button class="ab" onclick="event.stopPropagation();delTpl('${t.id}')" title="Delete">🗑</button>
+              </div>
+            </div>
+            <p style="font-size:11px;color:var(--muted);line-height:1.55;background:var(--surface);padding:7px 9px;border-radius:6px;border:1px solid var(--border);white-space:pre-wrap">${t.message.substring(0,100)}${t.message.length>100?"…":""}</p>
+          </div>`).join(""):`<p style="color:var(--muted);font-size:12px">No templates yet — click ＋ to add</p>`}
+        </div>
+      </div>`;
+    }).join("")}
+
+    <!-- Ungrouped templates -->
+    <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px">
+      <p style="font-weight:600;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">${groupNames.length?"Ungrouped Templates":"All Templates"}</p>
+      <div style="height:1px;flex:1;background:var(--border)"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:11px;margin-bottom:16px">
+      ${ungrouped.length?ungrouped.map(t=>`<div class="card" style="padding:15px;cursor:pointer" ondblclick="openTF('${t.id}')" title="Double-click to edit">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
           <div style="flex:1;min-width:0">
             <p style="font-weight:700;font-size:13px;margin-bottom:2px">${t.name}</p>
-            ${t.subject?`<p style="font-size:10px;color:#e8a838;font-weight:600">📧 Subject: ${t.subject}</p>`:""}
+            ${t.subject?`<p style="font-size:10px;color:#e8a838;font-weight:600">📧 ${t.subject}</p>`:""}
             <span style="font-size:10px;color:var(--muted)">${t.message.length} chars</span>
           </div>
-          <button class="ab" onclick="event.stopPropagation();delTpl('${t.id}')" title="Delete">🗑</button>
+          <div style="display:flex;gap:3px">
+            ${Object.keys(grps).length?`<button class="ab" onclick="event.stopPropagation();moveToGroup('${t.id}')" title="Move to group" style="font-size:11px;border:1px solid var(--border);padding:2px 6px;border-radius:5px;color:var(--muted)">📁</button>`:""}
+            <button class="ab" onclick="event.stopPropagation();delTpl('${t.id}')" title="Delete">🗑</button>
+          </div>
         </div>
         <p style="font-size:12px;color:var(--muted);line-height:1.65;background:var(--surface);padding:9px 11px;border-radius:7px;border:1.5px solid var(--border);white-space:pre-wrap">${t.message}</p>
-      </div>`).join("")}
+      </div>`).join(""):`<div style="padding:20px;color:var(--muted);font-size:12px">All templates are in groups.</div>`}
     </div>
-    <div style="margin-top:16px;padding:12px 16px;background:var(--surface);border-radius:10px;border:1.5px solid var(--border);font-size:11px;color:var(--muted)">
-      💡 <strong>Bulk Upload format:</strong> CSV or Excel with columns — <code style="background:#e2e8f0;padding:1px 5px;border-radius:4px">name, subject, message</code> · subject is optional
+    <div style="padding:10px 14px;background:var(--surface);border-radius:9px;border:1.5px solid var(--border);font-size:11px;color:var(--muted)">
+      💡 <strong>Bulk format:</strong> <code style="background:#e2e8f0;padding:1px 5px;border-radius:4px">name, subject, message</code> · subject optional
     </div>
   </div>`;
+}
+
+// Template groups (stored in localStorage — no DB needed)
+function saveGroups(){localStorage.setItem("n7tgroups",JSON.stringify(S.tgroups));}
+function loadGroups(){try{S.tgroups=JSON.parse(localStorage.getItem("n7tgroups")||"{}");}catch{S.tgroups={};}}
+
+function openGroupF(){
+  modal(`<div class="mh"><h3 style="font-weight:700;font-size:15px">📁 New Template Group</h3>${mX()}</div>
+    <div class="mb">
+      <div class="fg"><label class="label">Group Name</label><input class="input" id="gf-n" placeholder="e.g. Initial Contact, Subscription Offers, Follow Ups"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-s" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-p" onclick="saveGroupF()">Create Group</button>
+      </div>
+    </div>`);
+}
+function saveGroupF(){
+  const name=($("gf-n")?.value||"").trim();
+  if(!name){toast("Enter a group name","err");return;}
+  if(S.tgroups[name]){toast("Group already exists","err");return;}
+  S.tgroups[name]=[];saveGroups();toast("Group created!");closeModal();render();
+}
+function delGroup(name){
+  if(!confirm(`Delete group "${name}"? Templates will move to ungrouped.`))return;
+  delete S.tgroups[name];saveGroups();render();
+}
+function moveToGroup(tid){
+  const names=Object.keys(S.tgroups);
+  if(!names.length){toast("Create a group first","err");return;}
+  modal(`<div class="mh"><h3 style="font-weight:700;font-size:15px">📁 Move to Group</h3>${mX()}</div>
+    <div class="mb">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${names.map(n=>`<button class="btn btn-s" onclick="doMoveToGroup('${tid}','${n.replace(/'/g,"\\'")}')">📁 ${n}</button>`).join("")}
+      </div>
+    </div>`);
+}
+function doMoveToGroup(tid,gname){
+  // Remove from any existing group first
+  Object.keys(S.tgroups).forEach(g=>{S.tgroups[g]=S.tgroups[g].filter(id=>id!==tid);});
+  if(!S.tgroups[gname])S.tgroups[gname]=[];
+  S.tgroups[gname].push(tid);
+  saveGroups();toast(`Moved to ${gname}`);closeModal();render();
+}
+function addToGroup(gname){
+  const available=S.templates.filter(t=>!(S.tgroups[gname]||[]).includes(t.id));
+  if(!available.length){toast("All templates already in this group","err");return;}
+  modal(`<div class="mh"><h3 style="font-weight:700;font-size:15px">➕ Add to "${gname}"</h3>${mX()}</div>
+    <div class="mb">
+      <div style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto">
+        ${available.map(t=>`<button class="btn btn-s" style="text-align:left;justify-content:flex-start" onclick="doAddToGroup('${t.id}','${gname.replace(/'/g,"\\'")}')">
+          <span style="flex:1">${t.name}</span><span style="font-size:10px;color:var(--muted)">${t.message.length}c</span>
+        </button>`).join("")}
+      </div>
+    </div>`);
+}
+function doAddToGroup(tid,gname){
+  if(!S.tgroups[gname])S.tgroups[gname]=[];
+  if(!S.tgroups[gname].includes(tid))S.tgroups[gname].push(tid);
+  saveGroups();toast(`Added to ${gname}`);closeModal();render();
+}
+function removeFromGroup(gname,tid){
+  S.tgroups[gname]=(S.tgroups[gname]||[]).filter(id=>id!==tid);
+  saveGroups();render();
 }
 
 function openTF(id){
