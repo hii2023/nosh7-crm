@@ -99,7 +99,7 @@ self.addEventListener("push", event => {
     self.registration.showNotification(data.title, {
       body: data.body,
       icon: "./icons/icon-192.png",
-      badge: "/icons/icon-96.png",
+      badge: "./icons/icon-192.png",
       tag: "nosh7-notification",
       renotify: true
     })
