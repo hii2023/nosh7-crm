@@ -686,7 +686,7 @@ function filtL(){
   if(S._customFilter==="no_followup"){
     return r.filter(x=>x.status!=="New"&&x.status!=="Converted"&&x.status!=="Lost"&&!x.follow_up_date);
   }
-  if(f.search){const q=f.search.toLowerCase();r=r.filter(l=>(l.name||"").toLowerCase().includes(q)||(l.phone||"").includes(q)||(l.email||"").toLowerCase().includes(q)||(l.area||"").toLowerCase().includes(q)||(l.category||"").toLowerCase().includes(q)||(l.notes||"").toLowerCase().includes(q));}
+  if(f.search){const q=f.search.toLowerCase();const qp=q.replace(/\s/g,"");r=r.filter(l=>(l.name||"").toLowerCase().includes(q)||(l.phone||"").replace(/\s/g,"").includes(qp)||(l.email||"").toLowerCase().includes(q)||(l.area||"").toLowerCase().includes(q)||(l.category||"").toLowerCase().includes(q)||(l.notes||"").toLowerCase().includes(q));}
   if(f.status!=="all")r=r.filter(l=>l.status===f.status);
   if(f.category!=="all")r=r.filter(l=>hasCategory(l,f.category));
   r.sort((a,b)=>{const av=a[f.sort]||"",bv=b[f.sort]||"";return f.dir==="asc"?av.localeCompare(bv):bv.localeCompare(av);});
