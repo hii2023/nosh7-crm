@@ -1,103 +1,61 @@
 # NOSH7 CRM — WhatsApp Lead Manager
 
-A lightweight CRM for managing real estate/diet-food leads with WhatsApp messaging, built for **GitHub Pages + Supabase**.
+A **lightweight WhatsApp lead management CRM** built to run on GitHub Pages with a Supabase backend — no build pipeline, no server, just open and use.
 
----
+## What It Does
 
-## 🚀 How to Go Live (5 mins)
+Helps the NOSH7 sales team manage leads from first contact to conversion — add leads, send personalized WhatsApp messages with one tap, import bulk lists via CSV, and track status across the entire funnel.
 
-### Step 1 — Upload to GitHub
-1. Open your GitHub repo (`nosh7-crm`)
-2. Click **Add file → Upload files**
-3. Drag and drop `index.html` (this file's companion)
-4. Click **Commit changes**
+## Key Features
 
-### Step 2 — Enable GitHub Pages
-1. Go to repo **Settings → Pages**
-2. Under **Source**, select `Deploy from a branch`
-3. Choose branch: `main`, folder: `/ (root)`
-4. Click **Save**
-5. Wait ~60 seconds → your site is live at:
-   `https://YOUR_USERNAME.github.io/nosh7-crm`
+### Lead Management
+- **Add, edit, delete leads** — full CRUD with modal forms
+- **Bulk status update** — change multiple leads at once
+- **Lead categories** — organize by type, source, or segment
+- **Search and filter** — find leads instantly
 
----
+### WhatsApp Integration
+- **One-tap WhatsApp send** via `wa.me` deep link
+- **Message templates** with `{name}` personalization
+- **Template library** — create and reuse message formats
+- **No WhatsApp API needed** — works with standard WhatsApp
 
-## 🗄️ Database Setup (Supabase)
+### Data Management
+- **CSV import** — bulk-add leads from a spreadsheet
+- **CSV export** — download filtered lead list at any time
+- **Supabase backend** — data stored in PostgreSQL (leads, templates, categories tables)
+- **Public RLS policies** — no auth server needed
 
-Run this SQL in your Supabase **SQL Editor**:
+### Dashboard
+- **Stats overview** — total leads, by status, by category
+- **Status distribution bars** — visual breakdown at a glance
+- **Category breakdown** — pie/bar view by lead type
 
-```sql
--- Leads table
-create table leads (
-  id text primary key,
-  name text,
-  phone text,
-  email text,
-  website text,
-  address text,
-  status text default 'New',
-  category text,
-  area text,
-  follow_up_date text,
-  last_contacted text,
-  notes text,
-  created_date text
-);
+### PWA
+- **Installable on mobile** — add to home screen via `manifest.json`
+- **Service worker** (`sw.js`) — offline caching
 
--- Templates table
-create table templates (
-  id text primary key,
-  name text,
-  message text
-);
+## Tech Stack
 
--- Categories table
-create table categories (
-  name text primary key
-);
+| Technology | Purpose |
+|------------|---------|
+| React 18 (CDN) | UI — no build step |
+| Supabase JS v2 | Backend (PostgreSQL) |
+| HTML/CSS | Structure and styling |
+| PWA | Installable app |
 
--- Allow public read/write (for anon key access)
-alter table leads enable row level security;
-alter table templates enable row level security;
-alter table categories enable row level security;
+## Live Site
 
-create policy "Public access" on leads for all using (true) with check (true);
-create policy "Public access" on templates for all using (true) with check (true);
-create policy "Public access" on categories for all using (true) with check (true);
-```
+[https://hii2023.github.io/nosh7-crm](https://hii2023.github.io/nosh7-crm)
 
----
+## Supabase Tables
 
-## ✅ Features
+| Table | Purpose |
+|-------|---------|
+| `leads` | Lead records |
+| `templates` | WhatsApp message templates |
+| `categories` | Lead category definitions |
 
-| Feature | Details |
-|---|---|
-| Leads | Add, edit, delete, bulk update |
-| WhatsApp | Opens wa.me with pre-filled message |
-| Templates | Saved messages with `{name}` personalization |
-| Categories | Organize leads by type |
-| Import | Upload CSV to bulk-add leads |
-| Export | Download filtered leads as CSV |
-| Dashboard | Stats, status bars, category breakdown |
-| Storage | All data saved to Supabase cloud |
+## Audience
 
----
-
-## 📱 Access From Anywhere
-
-Once live, open on:
-- **Laptop** → browser bookmark
-- **Phone** → Add to Home Screen (PWA-like)
-- **Team** → Share the GitHub Pages URL
-
----
-
-## 🛠 Tech Stack
-- React 18 (via CDN, no build needed)
-- Supabase JS v2
-- Tailwind-inspired custom CSS
-- No npm, no webpack, no dependencies to install
-
----
-
-*Built for NOSH7 · Ahmedabad · 2026*
+NOSH7 sales team and similar small sales teams managing WhatsApp-based lead outreach.
